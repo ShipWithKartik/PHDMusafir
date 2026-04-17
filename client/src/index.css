@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --primary: #3B5F54;
+  --primary-dark: #2A483E;
+  --primary-light: #527A6D;
+  --travel-blue: #2A483E;
+  --travel-blue-light: #3B5F54;
+  --accent-warm: #D4CDBC;
+  --bg: #F8F9FA;
+  --bg-warm: #FDF6EF;
+  --text: #2D2D2D;
+  --text-muted: #6B6B6B;
+  --text-light: #9A9A9A;
+  --border: #E8E0D8;
+  --card-bg: #ffffff;
+  --shadow-sm: 0 2px 12px rgba(0, 0, 0, 0.06);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.15);
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Inter', 'Segoe UI', sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+/* Utility classes */
+.font-serif {
+  font-family: var(--font-serif) !important;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Animations */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes ken-burns {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}
+
+@keyframes fade-in-up {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.btn-float { animation: float 3s ease-in-out infinite; }
+.btn-float-delay { animation: float 3s ease-in-out infinite 0.5s; }
+
+/* Story Card Grid */
+.masonry-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  width: 100%;
+  align-items: start;
+}
+
+@media (min-width: 640px) {
+  .masonry-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (min-width: 1024px) {
+  .masonry-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.masonry-item {
+  width: 100%;
+  animation: fade-in-up 0.65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
