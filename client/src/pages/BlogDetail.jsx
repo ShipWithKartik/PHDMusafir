@@ -3,6 +3,9 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiArrowLeft, FiCalendar, FiUser, FiAlertCircle } from 'react-icons/fi';
 import api from '../services/api';
+import PostSidebar from '../components/PostSidebar';
+import PostNavigation from '../components/PostNavigation';
+import RecommendedPosts from '../components/RecommendedPosts';
 
 /* ── Helpers ─────────────────────────────────────────── */
 const fmtDate = (iso) =>
@@ -88,6 +91,7 @@ export default function BlogDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [blog, setBlog] = useState(null);
+  const [allBlogs, setAllBlogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -96,8 +100,12 @@ export default function BlogDetail() {
     (async () => {
       try {
         setLoading(true); setError('');
-        const res = await api.get(`/blogs/${id}`);
-        setBlog(res.data.data);
+        const [detailRes, listRes] = await Promise.all([
+          api.get(`/blogs/${id}`),
+          api.get('/blogs'),
+        ]);
+        setBlog(detailRes.data.data);
+        setAllBlogs(listRes.data.data || []);
       } catch (err) {
         setError(err?.response?.data?.message || 'Could not load this entry.');
       } finally {
@@ -125,6 +133,45 @@ export default function BlogDetail() {
   );
 
   const coverUrl = blog.images?.[0]?.url;
+
+  // Build city counts for sidebar (example: Chandigarh (5), Jammu (6), ...)
+  const cityCounts = allBlogs.reduce((acc, b) => {
+    const city = b.city?.trim();
+    if (!city) return acc;
+    acc[city] = (acc[city] || 0) + 1;
+    return acc;
+  }, {});
+
+  // Determine prev/next by createdAt (newest first)
+  const sorted = [...allBlogs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const idx = sorted.findIndex((b) => b._id === blog._id);
+  const prevPost = idx >= 0 ? sorted[idx + 1] : null; // older
+  const nextPost = idx > 0 ? sorted[idx - 1] : null; // newer
+
+  // Recommended: prefer same category, fallback to city, then random
+  const pool = sorted.filter((b) => b._id !== blog._id);
+  const sameCategory = blog.category
+    ? pool.filter((b) => (b.category || '').toLowerCase() === blog.category.toLowerCase())
+    : [];
+  const sameCity = blog.city
+    ? pool.filter((b) => (b.city || '').toLowerCase() === blog.city.toLowerCase())
+    : [];
+  const pickUnique = (arr, limit) => {
+    const out = [];
+    for (const item of arr) {
+      if (out.length >= limit) break;
+      if (!out.some((x) => x._id === item._id)) out.push(item);
+    }
+    return out;
+  };
+  const recommended = (() => {
+    const first = pickUnique(sameCategory, 3);
+    if (first.length >= 2) return first;
+    const second = pickUnique([...first, ...sameCity], 3);
+    if (second.length >= 2) return second;
+    // simple deterministic-ish fallback (already sorted)
+    return pickUnique([...second, ...pool], 3);
+  })();
 
   return (
     <>
@@ -270,8 +317,9 @@ export default function BlogDetail() {
           </motion.div>
         </div>
 
-        {/* ── Article body ── */}
-        <div style={{ maxWidth: 740, margin: '0 auto', padding: 'clamp(2.5rem, 5vw, 4rem) clamp(1.25rem, 5vw, 2rem) 6rem' }}>
+        {/* ── Article body + sidebar ── */}
+        <div className="pm-post-layout">
+          <div className="pm-post-main" style={{ paddingTop: 'clamp(2.5rem, 5vw, 4rem)' }}>
 
           {/* Drop cap first paragraph + body text */}
           <motion.div
@@ -399,6 +447,10 @@ export default function BlogDetail() {
               </div>
             </div>
 
+            {/* Next / Previous + Recommended */}
+            <PostNavigation prevPost={prevPost} nextPost={nextPost} />
+            <RecommendedPosts posts={recommended} />
+
             {/* Back link */}
             <div style={{ marginTop: '2.5rem', textAlign: 'center' }}>
               <Link
@@ -419,6 +471,9 @@ export default function BlogDetail() {
               </Link>
             </div>
           </motion.div>
+          </div>
+
+          <PostSidebar cityCounts={cityCounts} />
         </div>
       </article>
 

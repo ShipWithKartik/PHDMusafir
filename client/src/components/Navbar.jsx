@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FiUploadCloud, FiCompass, FiHome, FiLogIn, FiLogOut, FiBook, FiShield, FiPenTool } from 'react-icons/fi';
+import { FiUploadCloud, FiCompass, FiHome, FiLogIn, FiLogOut, FiBook, FiShield, FiPenTool, FiSearch } from 'react-icons/fi';
+import { FaFacebookF, FaPinterestP, FaInstagram, FaYoutube, FaAmazon } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
@@ -12,7 +13,7 @@ export default function Navbar() {
 
   /* Track scroll position */
   useEffect(() => {
-    if (!isHero) { setScrolled(true); return; }
+    if (!isHero) return;
     const handle = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', handle, { passive: true });
     handle();
@@ -70,13 +71,13 @@ export default function Navbar() {
       <div style={{ maxWidth: 1152, margin: '0 auto', padding: '0 1.25rem', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* Brand */}
         <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', textDecoration: 'none' }}>
-          <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>✈️</span>
-          <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: '1.25rem', letterSpacing: '-0.02em', color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
+          <span style={{ fontSize: '1.2rem', lineHeight: 1 }}></span>
+          <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.02em', color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
             PHDMusafir
           </span>
         </Link>
 
-        {/* Nav links + auth */}
+        {/* Nav links + social + auth */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
           {navLink('/', 'Home', FiHome)}
           {navLink('/discover', 'Discover', FiCompass)}
@@ -96,6 +97,34 @@ export default function Navbar() {
             background: 'rgba(255,255,255,0.25)',
             margin: '0 0.5rem',
           }} />
+
+          {/* Social icons (top-right) */}
+          <div className="pm-nav-social" aria-label="Social links">
+            <a className="pm-nav-social__icon" href="https://facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook">
+              <FaFacebookF />
+            </a>
+            <a className="pm-nav-social__icon" href="https://pinterest.com" target="_blank" rel="noreferrer" aria-label="Pinterest">
+              <FaPinterestP />
+            </a>
+            <a className="pm-nav-social__icon" href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">
+              <FaInstagram />
+            </a>
+            <a className="pm-nav-social__icon" href="https://youtube.com" target="_blank" rel="noreferrer" aria-label="YouTube">
+              <FaYoutube />
+            </a>
+            <a className="pm-nav-social__icon" href="https://amazon.com" target="_blank" rel="noreferrer" aria-label="Amazon affiliate">
+              <FaAmazon />
+            </a>
+            <button
+              type="button"
+              className="pm-nav-social__icon pm-nav-social__icon--button"
+              aria-label="Search"
+              title="Search (coming soon)"
+              onClick={() => {}}
+            >
+              <FiSearch />
+            </button>
+          </div>
 
           {isLoggedIn ? (
             /* Logged in: avatar + logout */

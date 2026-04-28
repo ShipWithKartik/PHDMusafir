@@ -6,6 +6,7 @@ import {
   FiCalendar, FiUser,
 } from 'react-icons/fi';
 import api from '../services/api';
+import { getStaticCoverForCategory } from '../config/images';
 
 /* ── Helpers ──────────────────────────────────────────── */
 const fromSlug = (s = '') =>
@@ -199,8 +200,8 @@ export default function CategoryBlogs() {
     })();
   }, [cityName, categoryName]);
 
-  /* Hero cover — first blog's image */
-  const heroCover = blogs[0]?.images?.[0]?.url;
+  /* Hero cover — static (not "latest post image") */
+  const heroCover = getStaticCoverForCategory(`${cityName}:${categoryName}`);
 
   return (
     <>
@@ -214,7 +215,7 @@ export default function CategoryBlogs() {
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
           {/* Background */}
-          {heroCover && !loading ? (
+          {!loading ? (
             <img
               src={heroCover} alt={categoryName}
               style={{

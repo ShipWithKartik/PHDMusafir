@@ -19,6 +19,8 @@ import WriteBlog from './pages/WriteBlog';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
+import AboutSection from './components/AboutSection';
+import { IMAGES } from './config/images';
 
 /* ─────────────────────────────────────────────────────────
    Counting number hook
@@ -309,7 +311,7 @@ function HomePage() {
           style={{
             position: 'absolute',
             inset: '-8%',
-            backgroundImage: "url('https://images.pexels.com/photos/459225/pexels-photo-459225.jpeg')",
+            backgroundImage: `url('${IMAGES.homeHero}')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             willChange: 'transform',
@@ -534,6 +536,9 @@ function HomePage() {
 
       {/* ── World Map Section ── */}
       <WorldMapSection />
+
+      {/* ── About Section (extends landing page) ── */}
+      <AboutSection />
     </>
   );
 }

@@ -5,6 +5,7 @@ import {
   FiArrowLeft, FiBookOpen, FiAlertCircle, FiRefreshCw, FiChevronRight,
 } from 'react-icons/fi';
 import api from '../services/api';
+import { getStaticCoverForCity } from '../config/images';
 
 /* ── Helpers ──────────────────────────────────────────── */
 const fmtSlug = (s = '') => s.toLowerCase().replace(/\s+/g, '-');
@@ -218,10 +219,10 @@ export default function CityJournal() {
           marginTop: -80, overflow: 'hidden',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {/* Background — use the first blog's cover or a fallback */}
-          {blogs[0]?.images?.[0]?.url && !loading ? (
+          {/* Background — static cover (not "latest post image") */}
+          {!loading ? (
             <img
-              src={blogs[0].images[0].url}
+              src={getStaticCoverForCity(cityName)}
               alt={cityName}
               style={{
                 position: 'absolute', inset: 0,

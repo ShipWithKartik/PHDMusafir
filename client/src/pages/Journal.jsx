@@ -5,6 +5,7 @@ import {
   FiBookOpen, FiAlertCircle, FiRefreshCw, FiChevronRight, FiMapPin,
 } from 'react-icons/fi';
 import api from '../services/api';
+import { getStaticCoverForCity } from '../config/images';
 
 /* ── Helpers ──────────────────────────────────────────── */
 const fmtSlug = (s = '') => s.toLowerCase().replace(/\s+/g, '-');
@@ -37,7 +38,8 @@ function SkeletonCard() {
 /* ── City card ────────────────────────────────────────── */
 function CityCard({ city, blogs, index }) {
   const [hovered, setHovered] = useState(false);
-  const coverUrl = blogs[0]?.images?.[0]?.url;
+  // Static cover (not "latest post image")
+  const coverUrl = getStaticCoverForCity(city);
 
   /* Count unique categories available */
   const uniqueCats = [...new Set(blogs.map((b) => b.category).filter(Boolean))];
