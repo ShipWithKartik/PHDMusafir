@@ -432,4 +432,106 @@ const getJourneyPins = async (req, res) => {
   }
 };
 
-module.exports = { uploadStory, getAllStories, getMyStories, updateStory, deleteStory, getStoriesMeta, getJourneyPins };
+/**
+ * @desc    Get the 5 most recent content items (stories + accepted blogs)
+ * @route   GET /api/stories/recent
+ * @access  Public
+ */
+const getRecentContent = async (req, res) => {
+  try {
+    const Blog = require('../models/Blog');
+
+    // Fetch latest 5 stories
+    const recentStories = await Story.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('title image placeVisited category createdAt')
+      .lean();
+
+    // Fetch latest 5 accepted blogs
+    const recentBlogs = await Blog.find({ status: 'accepted' })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .select('title images city category createdAt')
+      .lean();
+
+    // Normalize and merge
+    const merged = [
+      ...recentStories.map((s) => ({
+        _id: s._id,
+        title: s.title,
+        image: s.image,
+        city: s.placeVisited,
+        category: s.category,
+        createdAt: s.createdAt,
+        type: 'story',
+      })),
+      ...recentBlogs.map((b) => ({
+        _id: b._id,
+        title: b.title,
+        image: b.images?.[0]?.url || '',
+        city: b.city,
+        category: b.category,
+        createdAt: b.createdAt,
+        type: 'blog',
+      })),
+    ];
+
+    // Sort by newest first, take top 5
+    merged.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const top5 = merged.slice(0, 5);
+
+    res.status(200).json({ success: true, data: top5 });
+  } catch (error) {
+    console.error('getRecentContent error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+/**
+ * @desc    Get per-city stats: story count + accepted journal post count
+ * @route   GET /api/stories/city-stats
+ * @access  Public
+ */
+const getCityStats = async (req, res) => {
+  try {
+    const Blog = require('../models/Blog');
+
+    // Story counts per city
+    const storyAgg = await Story.aggregate([
+      { $group: { _id: '$placeVisited', storyCount: { $sum: 1 } } },
+    ]);
+
+    // Accepted blog counts per city
+    const blogAgg = await Blog.aggregate([
+      { $match: { status: 'accepted' } },
+      { $group: { _id: '$city', blogCount: { $sum: 1 } } },
+    ]);
+
+    // Merge
+    const cityMap = {};
+    for (const doc of storyAgg) {
+      if (!doc._id) continue;
+      cityMap[doc._id] = { city: doc._id, storyCount: doc.storyCount, blogCount: 0 };
+    }
+    for (const doc of blogAgg) {
+      if (!doc._id) continue;
+      if (cityMap[doc._id]) {
+        cityMap[doc._id].blogCount = doc.blogCount;
+      } else {
+        cityMap[doc._id] = { city: doc._id, storyCount: 0, blogCount: doc.blogCount };
+      }
+    }
+
+    const stats = Object.values(cityMap).sort((a, b) =>
+      (b.storyCount + b.blogCount) - (a.storyCount + a.blogCount)
+    );
+
+    res.status(200).json({ success: true, data: stats });
+  } catch (error) {
+    console.error('getCityStats error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+module.exports = { uploadStory, getAllStories, getMyStories, updateStory, deleteStory, getStoriesMeta, getJourneyPins, getRecentContent, getCityStats };

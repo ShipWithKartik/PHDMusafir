@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiRefreshCw, FiAlertCircle, FiInbox, FiUploadCloud, FiX } from 'react-icons/fi';
+import { FiRefreshCw, FiAlertCircle, FiInbox, FiUploadCloud, FiX, FiArrowRight, FiMapPin } from 'react-icons/fi';
 import { useLocation } from 'react-router-dom';
 import { getAllStories } from '../services/storyService';
-import StoryCard from '../components/StoryCard';
 import StoryModal from '../components/StoryModal';
+import DiscoverSidebar from '../components/DiscoverSidebar';
 
 /* ─── Category emoji map ─────────────────────────────────── */
 const CATEGORY_EMOJI = {
@@ -27,16 +27,36 @@ const getEmoji = (cat) => CATEGORY_EMOJI[cat] || CATEGORY_EMOJI[cat?.toLowerCase
 
 const ALL = 'All';
 
-/* ─── Skeleton card ──────────────────────────────────────── */
+/* ─── Skeleton card (editorial landscape) ───────────────── */
 function SkeletonCard() {
   return (
     <div style={{
-      aspectRatio: '4 / 5',
-      borderRadius: 18,
-      background: 'linear-gradient(90deg,#ede8e3 25%,#f5f0eb 50%,#ede8e3 75%)',
-      backgroundSize: '200% 100%',
-      animation: 'shimmer 1.5s infinite',
-    }} />
+      background: '#fff',
+      borderRadius: 4,
+      overflow: 'hidden',
+      boxShadow: '0 2px 16px rgba(0,0,0,0.05)',
+      paddingBottom: '2rem',
+    }}>
+      {/* Image skeleton */}
+      <div style={{
+        width: '100%',
+        aspectRatio: '16 / 9',
+        background: 'linear-gradient(90deg,#ede8e3 25%,#f5f0eb 50%,#ede8e3 75%)',
+        backgroundSize: '200% 100%',
+        animation: 'shimmer 1.5s infinite',
+      }} />
+      <div style={{ padding: '1.5rem 2rem' }}>
+        {/* Category line */}
+        <div style={{ width: '20%', height: 10, borderRadius: 4, background: 'linear-gradient(90deg,#ede8e3 25%,#f5f0eb 50%,#ede8e3 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', marginBottom: '1rem' }} />
+        {/* Title */}
+        <div style={{ width: '75%', height: 22, borderRadius: 4, background: 'linear-gradient(90deg,#ede8e3 25%,#f5f0eb 50%,#ede8e3 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', marginBottom: '0.6rem' }} />
+        <div style={{ width: '50%', height: 22, borderRadius: 4, background: 'linear-gradient(90deg,#ede8e3 25%,#f5f0eb 50%,#ede8e3 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', marginBottom: '1.25rem' }} />
+        {/* Excerpt */}
+        {[100, 92, 70].map((w, i) => (
+          <div key={i} style={{ width: `${w}%`, height: 11, borderRadius: 4, background: 'linear-gradient(90deg,#ede8e3 25%,#f5f0eb 50%,#ede8e3 75%)', backgroundSize: '200% 100%', animation: 'shimmer 1.5s infinite', marginBottom: '0.45rem' }} />
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -156,8 +176,8 @@ function DiscoverHeader({ city, category, totalShown, totalAll, bgImage }) {
         inset: '-5%', // Extra bleed for scale to hide edges
         zIndex: 0,
       }}>
-        <img 
-          src={secureBgImage} 
+        <img
+          src={secureBgImage}
           alt="Hero Cover"
           style={{
             width: '100%',
@@ -177,11 +197,11 @@ function DiscoverHeader({ city, category, totalShown, totalAll, bgImage }) {
       }} />
 
       {/* Content */}
-      <div style={{ 
-        position: 'relative', 
-        zIndex: 2, 
-        maxWidth: 820, 
-        padding: '0 2rem', 
+      <div style={{
+        position: 'relative',
+        zIndex: 2,
+        maxWidth: 820,
+        padding: '0 2rem',
         textAlign: 'center',
         marginTop: '64px', // Offset nav
       }}>
@@ -198,13 +218,13 @@ function DiscoverHeader({ city, category, totalShown, totalAll, bgImage }) {
           key={heading}
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.1 }}
-          style={{ 
-            fontFamily: 'var(--font-serif)', 
-            fontSize: 'clamp(2.5rem, 6vw, 4.5rem)', 
-            fontWeight: 700, 
-            color: '#fff', 
-            letterSpacing: '-0.02em', 
-            lineHeight: 1.1, 
+          style={{
+            fontFamily: 'var(--font-serif)',
+            fontSize: 'clamp(2.5rem, 6vw, 4.5rem)',
+            fontWeight: 700,
+            color: '#fff',
+            letterSpacing: '-0.02em',
+            lineHeight: 1.1,
             marginBottom: '1.2rem',
             textShadow: '0 4px 12px rgba(0,0,0,0.4)',
           }}
@@ -216,12 +236,12 @@ function DiscoverHeader({ city, category, totalShown, totalAll, bgImage }) {
           key={sub}
           initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-          style={{ 
-            fontFamily: 'var(--font-serif)', 
-            fontStyle: 'italic', 
-            color: 'rgba(255,255,255,0.85)', 
-            fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)', 
-            maxWidth: 640, 
+          style={{
+            fontFamily: 'var(--font-serif)',
+            fontStyle: 'italic',
+            color: 'rgba(255,255,255,0.85)',
+            fontSize: 'clamp(1.1rem, 2.5vw, 1.35rem)',
+            maxWidth: 640,
             margin: '0 auto 2rem',
             lineHeight: 1.6,
             textShadow: '0 2px 6px rgba(0,0,0,0.4)',
@@ -230,7 +250,7 @@ function DiscoverHeader({ city, category, totalShown, totalAll, bgImage }) {
           {sub}
         </motion.p>
 
-        <motion.span 
+        <motion.span
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: 0.4 }}
           style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.2)', backdropFilter: 'blur(12px)', color: '#fff', fontSize: '0.75rem', fontWeight: 600, padding: '0.4rem 1.1rem', borderRadius: 999, textTransform: 'uppercase', letterSpacing: '0.05em' }}
@@ -279,7 +299,7 @@ export default function Discover() {
     const map = {};
     stories.forEach((s) => { const c = s.placeVisited || 'Unknown'; map[c] = (map[c] || 0) + 1; });
     return [
-      { id: ALL, label: '🌍 All Cities' },
+      { id: ALL, label: 'All Cities' },
       ...Object.entries(map).sort(([a], [b]) => a.localeCompare(b)).map(([city, count]) => ({ id: city, label: city, count })),
     ];
   }, [stories]);
@@ -402,8 +422,15 @@ export default function Discover() {
           </div>
         </div>
 
-        {/* ── Content ── */}
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '1.75rem 1.25rem 4rem' }}>
+        {/* ── Content — 2-column grid (feed + sidebar) ── */}
+        <div className="discover-content-grid" style={{
+          maxWidth: 1280,
+          margin: '0 auto',
+          padding: '1.75rem 1.25rem 4rem',
+        }}>
+
+        {/* ── Main feed column ── */}
+        <div>
 
           {/* Active filters + count row */}
           <AnimatePresence>
@@ -448,12 +475,8 @@ export default function Discover() {
 
           {/* Skeletons */}
           {loading && (
-            <div className="masonry-grid">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="masonry-item">
-                  <SkeletonCard />
-                </div>
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '3rem' }}>
+              {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
           )}
 
@@ -488,25 +511,209 @@ export default function Discover() {
             </motion.div>
           )}
 
-          {/* Story grid — Masonry layout */}
+          {/* ── Single-column editorial story list ── */}
           {!loading && filteredStories.length > 0 && (
-            <div className="masonry-grid">
+            <div>
+
+              {/* Results counter */}
+              <p style={{
+                fontFamily: 'var(--font-sans)',
+                fontSize: '0.68rem',
+                fontWeight: 600,
+                letterSpacing: '0.14em',
+                textTransform: 'uppercase',
+                color: '#B0A89E',
+                marginBottom: '2.5rem',
+                borderBottom: '1px solid #EDEBE8',
+                paddingBottom: '1rem',
+              }}>
+                Showing: 1–{filteredStories.length} of {stories.length} Results
+              </p>
+
               <AnimatePresence mode="popLayout">
-                {filteredStories.map((story) => (
-                  <div key={story._id} className="masonry-item">
-                    <StoryCard story={story} onClick={() => setSelectedStory(story)} />
-                  </div>
-                ))}
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {filteredStories.map((story, idx) => (
+                    <motion.article
+                      key={story._id}
+                      layout
+                      initial={{ opacity: 0, y: 24 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -12 }}
+                      transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: Math.min(idx, 4) * 0.06 }}
+                      onClick={() => setSelectedStory(story)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' && setSelectedStory(story)}
+                      style={{
+                        cursor: 'pointer',
+                        outline: 'none',
+                        background: 'transparent',
+                        borderBottom: '1px solid #EDEBE8',
+                        paddingBottom: '3.5rem',
+                        marginBottom: '3.5rem',
+                        transition: 'opacity 0.2s ease',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.opacity = '0.88'}
+                      onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
+                    >
+                      {/* ── Cinematic fixed-height image ── */}
+                      <div style={{
+                        width: '100%',
+                        height: 380,
+                        overflow: 'hidden',
+                        borderRadius: 4,
+                        position: 'relative',
+                      }}>
+                        <img
+                          src={story.image}
+                          alt={story.title}
+                          loading="lazy"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            display: 'block',
+                            transition: 'transform 0.75s cubic-bezier(0.22, 1, 0.36, 1)',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.04)'}
+                          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                        />
+                      </div>
+
+                      {/* ── Text body ── */}
+                      <div style={{ paddingTop: '0.25rem' }}>
+
+                        {/* Category tag — terracotta, wide tracking */}
+                        <p style={{
+                          fontFamily: 'var(--font-sans)',
+                          fontSize: '0.62rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.28em',
+                          textTransform: 'uppercase',
+                          color: '#C07A4F',
+                          margin: '1.75rem 0 0.6rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.45rem',
+                        }}>
+                          {story.placeVisited && (
+                            <>
+                              <FiMapPin style={{ fontSize: '0.65rem', color: '#9A9A9A' }} />
+                              <span style={{ color: '#9A9A9A', letterSpacing: '0.18em' }}>
+                                {story.placeVisited}
+                              </span>
+                              <span style={{ color: '#D4CDBC' }}>·</span>
+                            </>
+                          )}
+                          {getEmoji(story.category)}&nbsp;{story.category || 'Travel'}
+                        </p>
+
+                        {/* Title — large serif */}
+                        <h2 style={{
+                          fontFamily: 'var(--font-serif)',
+                          fontSize: 'clamp(1.6rem, 3.5vw, 2.15rem)',
+                          fontWeight: 700,
+                          color: '#111111',
+                          letterSpacing: '-0.025em',
+                          lineHeight: 1.18,
+                          margin: '0 0 1rem',
+                        }}>
+                          {story.title}
+                        </h2>
+
+                        {/* Excerpt — 3-line clamp */}
+                        {story.description && (
+                          <p style={{
+                            fontFamily: 'var(--font-sans)',
+                            fontSize: '0.92rem',
+                            color: '#6B6B6B',
+                            lineHeight: 1.82,
+                            margin: '0 0 0.5rem',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 3,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}>
+                            {story.description}
+                          </p>
+                        )}
+
+                        {/* ── Card footer ── */}
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          marginTop: '1.75rem',
+                          flexWrap: 'wrap',
+                          gap: '0.5rem',
+                        }}>
+
+                          {/* Left — comment count placeholder */}
+                          <span style={{
+                            fontFamily: 'var(--font-sans)',
+                            fontSize: '0.75rem',
+                            color: '#B0A89E',
+                            fontWeight: 500,
+                          }}>
+                            0 Comments
+                          </span>
+
+                          {/* Right — Read More with terracotta hover */}
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.35rem',
+                              fontFamily: 'var(--font-sans)',
+                              fontSize: '0.75rem',
+                              fontWeight: 700,
+                              letterSpacing: '0.06em',
+                              textTransform: 'uppercase',
+                              color: '#9A9A9A',
+                              transition: 'color 0.22s ease',
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.color = '#C07A4F'}
+                            onMouseLeave={(e) => e.currentTarget.style.color = '#9A9A9A'}
+                          >
+                            Read More
+                            <FiArrowRight style={{ fontSize: '0.8rem', strokeWidth: 2.5 }} />
+                          </span>
+                        </div>
+                      </div>
+                    </motion.article>
+                  ))}
+                </div>
               </AnimatePresence>
             </div>
           )}
+        </div>  {/* end feed column */}
+
+        {/* ── Sidebar column ── */}
+        <div className="discover-sidebar-col">
+          <DiscoverSidebar onCityFilter={handleCitySelect} />
         </div>
+
+        </div>  {/* end content grid */}
       </div>
 
       <style>{`
         @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+
+        .discover-content-grid {
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 2rem;
+        }
+        .discover-sidebar-col { display: none; }
+
+        @media (min-width: 960px) {
+          .discover-content-grid {
+            grid-template-columns: 2fr 1fr;
+            gap: 3.5rem;
+          }
+          .discover-sidebar-col { display: block; }
+        }
       `}</style>
     </>
   );
 }
-

@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
   FiCheck, FiX, FiTrash2, FiEdit2, FiEye, FiClock,
-  FiBookOpen, FiShield, FiAlertTriangle, FiChevronDown,
+  FiBookOpen, FiShield, FiAlertTriangle, FiChevronDown, FiSearch,
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -417,7 +417,7 @@ function PendingRow({ blog, onPreview, onAccept, onEdit, onReject, busy }) {
 }
 
 /* ─── Published row ──────────────────────────────────────── */
-function PublishedRow({ blog, onPreview, onDelete, busy }) {
+function PublishedRow({ blog, onPreview, onEdit, onDelete, busy }) {
   return (
     <motion.div
       layout
@@ -463,6 +463,7 @@ function PublishedRow({ blog, onPreview, onDelete, busy }) {
       {/* Actions */}
       <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
         <Btn onClick={() => onPreview(blog)} icon={FiEye} color="#555" bg="#F4F4F4" small>View</Btn>
+        <Btn onClick={() => onEdit(blog)} icon={FiEdit2} color="#1D4ED8" bg="#DBEAFE" small disabled={busy}>Edit</Btn>
         <Btn onClick={() => onDelete(blog)} icon={FiTrash2} color="#DC2626" bg="#FEE2E2" small disabled={busy}>Delete</Btn>
       </div>
     </motion.div>
@@ -497,6 +498,11 @@ export default function AdminDashboard() {
   const [rejectBlog, setRejectBlog]   = useState(null);
   const [editBlog, setEditBlog]       = useState(null);
   const [deleteBlog, setDeleteBlog]   = useState(null);
+  const [editPublishedBlog, setEditPublishedBlog] = useState(null);
+
+  // Published-tab client-side filters
+  const [searchTerm, setSearchTerm]   = useState('');
+  const [filterCity, setFilterCity]   = useState('All');
 
   /* Auth gate — redirect non-admins immediately */
   if (!user || user.role !== 'admin') return <Navigate to="/" replace />;
@@ -520,6 +526,28 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  /* Derived: unique cities from published posts */
+  const uniqueCities = useMemo(() => {
+    const set = new Set(published.map(b => b.city).filter(Boolean));
+    return [...set].sort();
+  }, [published]);
+
+  /* Derived: filtered published list (search + city) */
+  const filteredPublished = useMemo(() => {
+    let list = published;
+    if (filterCity !== 'All') {
+      list = list.filter(b => b.city === filterCity);
+    }
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      list = list.filter(b =>
+        b.title?.toLowerCase().includes(q) ||
+        b.author?.name?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [published, filterCity, searchTerm]);
+
   /* Actions */
   const handleAccept = async (id) => {
     try {
@@ -542,10 +570,10 @@ export default function AdminDashboard() {
     finally { setBusy(false); }
   };
 
-  const handleEditConfirm = async ({ title, content, adminNote }) => {
+  const handleEditConfirm = async ({ title, content, city, category, adminNote }) => {
     try {
       setBusy(true);
-      await api.put(`/admin/blogs/${editBlog._id}/edit`, { title, content, adminNote });
+      await api.put(`/admin/blogs/${editBlog._id}/edit`, { title, content, city, category, adminNote });
       toast.success('Blog edited & accepted ✓');
       setEditBlog(null);
       await fetchAll();
@@ -561,6 +589,17 @@ export default function AdminDashboard() {
       setDeleteBlog(null);
       await fetchAll();
     } catch { toast.error('Could not delete blog'); }
+    finally { setBusy(false); }
+  };
+
+  const handleEditPublishedConfirm = async ({ title, content, city, category, adminNote }) => {
+    try {
+      setBusy(true);
+      await api.put(`/admin/blogs/${editPublishedBlog._id}/edit`, { title, content, city, category, adminNote });
+      toast.success('Published post updated ✓');
+      setEditPublishedBlog(null);
+      await fetchAll();
+    } catch { toast.error('Could not save edit'); }
     finally { setBusy(false); }
   };
 
@@ -594,6 +633,7 @@ export default function AdminDashboard() {
       {rejectBlog  && <RejectModal  blog={rejectBlog}  onClose={() => setRejectBlog(null)}  onConfirm={handleRejectConfirm} loading={busy} />}
       {editBlog    && <EditModal    blog={editBlog}    onClose={() => setEditBlog(null)}    onConfirm={handleEditConfirm}   loading={busy} />}
       {deleteBlog  && <DeleteModal  blog={deleteBlog}  onClose={() => setDeleteBlog(null)}  onConfirm={handleDeleteConfirm} loading={busy} />}
+      {editPublishedBlog && <EditModal blog={editPublishedBlog} onClose={() => setEditPublishedBlog(null)} onConfirm={handleEditPublishedConfirm} loading={busy} />}
 
       <div style={{ minHeight: '100vh', background: '#F6F4F1', paddingTop: 80 }}>
 
@@ -679,24 +719,148 @@ export default function AdminDashboard() {
 
           {/* Published tab */}
           {!loadingData && tab === 'published' && (
-            <AnimatePresence mode="popLayout">
-              {published.length === 0
-                ? <EmptyState icon={FiBookOpen} msg="No published blogs yet." />
-                : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    {published.map(blog => (
-                      <PublishedRow
-                        key={blog._id}
-                        blog={blog}
-                        busy={busy}
-                        onPreview={setPreviewBlog}
-                        onDelete={setDeleteBlog}
-                      />
-                    ))}
+            <>
+              {/* ── Search & Filter action bar ── */}
+              <div style={{
+                display: 'flex', flexDirection: 'column',
+                gap: '0.75rem', marginBottom: '1.5rem',
+              }}>
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap',
+                  gap: '0.75rem', alignItems: 'stretch',
+                }}>
+                  {/* Search input */}
+                  <div style={{ position: 'relative', flex: '1 1 260px', minWidth: 200 }}>
+                    <FiSearch style={{
+                      position: 'absolute', left: '0.85rem', top: '50%',
+                      transform: 'translateY(-50%)', fontSize: '0.9rem',
+                      color: '#9A9A9A', pointerEvents: 'none',
+                    }} />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Search by title or author\u2026"
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 0.9rem 0.65rem 2.4rem',
+                        border: '1.5px solid #E8E0D8',
+                        borderRadius: 10,
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: '0.88rem',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        color: '#333',
+                        background: '#fff',
+                        transition: 'border-color 0.2s, box-shadow 0.2s',
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#3B5F54';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(59,95,84,0.10)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#E8E0D8';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    />
                   </div>
-                )
-              }
-            </AnimatePresence>
+
+                  {/* City dropdown */}
+                  <div style={{ position: 'relative', flex: '0 0 auto', minWidth: 160 }}>
+                    <select
+                      value={filterCity}
+                      onChange={(e) => setFilterCity(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.65rem 2.2rem 0.65rem 0.9rem',
+                        border: '1.5px solid #E8E0D8',
+                        borderRadius: 10,
+                        fontFamily: 'var(--font-sans)',
+                        fontSize: '0.88rem',
+                        appearance: 'none',
+                        outline: 'none',
+                        boxSizing: 'border-box',
+                        color: '#333',
+                        background: '#fff',
+                        cursor: 'pointer',
+                        transition: 'border-color 0.2s, box-shadow 0.2s',
+                      }}
+                      onFocus={(e) => {
+                        e.target.style.borderColor = '#3B5F54';
+                        e.target.style.boxShadow = '0 0 0 3px rgba(59,95,84,0.10)';
+                      }}
+                      onBlur={(e) => {
+                        e.target.style.borderColor = '#E8E0D8';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    >
+                      <option value="All">All Cities</option>
+                      {uniqueCities.map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                    <FiChevronDown style={{
+                      position: 'absolute', right: '0.8rem', top: '50%',
+                      transform: 'translateY(-50%)', pointerEvents: 'none',
+                      color: '#9A9A9A', fontSize: '0.85rem',
+                    }} />
+                  </div>
+                </div>
+
+                {/* Result count */}
+                <p style={{
+                  fontSize: '0.72rem', color: '#9A9A9A', fontWeight: 500,
+                  fontFamily: 'var(--font-sans)', margin: 0,
+                }}>
+                  Showing {filteredPublished.length} of {published.length} published posts
+                </p>
+              </div>
+
+              {/* ── Published list ── */}
+              <AnimatePresence mode="popLayout">
+                {published.length === 0
+                  ? <EmptyState icon={FiBookOpen} msg="No published blogs yet." />
+                  : filteredPublished.length === 0
+                    ? (
+                      <div style={{
+                        display: 'flex', flexDirection: 'column', alignItems: 'center',
+                        justifyContent: 'center', gap: '0.75rem',
+                        padding: '4rem 1rem', textAlign: 'center',
+                      }}>
+                        <FiSearch style={{ fontSize: '2.2rem', color: 'rgba(59,95,84,0.2)' }} />
+                        <p style={{ color: '#9A9A9A', fontSize: '0.9rem', maxWidth: 320 }}>
+                          No published posts match your search criteria.
+                        </p>
+                        <button
+                          onClick={() => { setSearchTerm(''); setFilterCity('All'); }}
+                          style={{
+                            background: 'rgba(59,95,84,0.10)', color: '#3B5F54',
+                            border: 'none', borderRadius: 8, padding: '0.5rem 1.1rem',
+                            fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer',
+                            fontFamily: 'var(--font-sans)',
+                          }}
+                        >
+                          Clear filters
+                        </button>
+                      </div>
+                    )
+                    : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {filteredPublished.map(blog => (
+                          <PublishedRow
+                            key={blog._id}
+                            blog={blog}
+                            busy={busy}
+                            onPreview={setPreviewBlog}
+                            onEdit={setEditPublishedBlog}
+                            onDelete={setDeleteBlog}
+                          />
+                        ))}
+                      </div>
+                    )
+                }
+              </AnimatePresence>
+            </>
           )}
         </div>
       </div>

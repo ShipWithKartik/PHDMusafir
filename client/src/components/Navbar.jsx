@@ -69,37 +69,38 @@ export default function Navbar() {
       height: 80,
     }}>
       <div style={{ maxWidth: 1152, margin: '0 auto', padding: '0 1.25rem', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        {/* Brand */}
-        <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', textDecoration: 'none' }}>
-          <span style={{ fontSize: '1.2rem', lineHeight: 1 }}></span>
-          <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: '1.5rem', letterSpacing: '-0.02em', color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)' }}>
-            PHDMusafir
-          </span>
-        </Link>
+        
+        {/* GROUP 1 & 2: Left side (Logo + Nav Links) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '2.5rem' }}>
+          
+          {/* Brand */}
+          <Link to="/" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', textDecoration: 'none' }}>
+            <span style={{ fontSize: '1.2rem', lineHeight: 1 }}></span>
+            <span style={{ fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: '1.15rem', letterSpacing: '-0.02em', color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.3)', whiteSpace: 'nowrap' }}>
+              PHDMusafir
+            </span>
+          </Link>
 
-        {/* Nav links + social + auth */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-          {navLink('/', 'Home', FiHome)}
-          {navLink('/discover', 'Discover', FiCompass)}
-          {/* Journal — visible to everyone */}
-          {navLink('/journal', 'Journal', FiBook, true)}
-          {/* Write a Blog — only logged-in non-admin users */}
-          {isLoggedIn && user?.role !== 'admin' && navLink('/write-blog', 'Write a Blog', FiPenTool, true)}
-          {/* Share Story — only logged-in non-admin users */}
-          {isLoggedIn && user?.role !== 'admin' && navLink('/upload', 'Share Story', FiUploadCloud)}
-          {/* Admin — only the admin */}
-          {user?.role === 'admin' && navLink('/admin', 'Admin', FiShield)}
+          {/* Nav links */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+            {navLink('/', 'Home', FiHome)}
+            {navLink('/discover', 'Discover', FiCompass)}
+            {/* Journal — visible to everyone */}
+            {navLink('/journal', 'Journal', FiBook, true)}
+            {/* Write a Blog — only logged-in non-admin users */}
+            {isLoggedIn && user?.role !== 'admin' && navLink('/write-blog', 'Write a Blog', FiPenTool, true)}
+            {/* Share Story — only logged-in non-admin users */}
+            {isLoggedIn && user?.role !== 'admin' && navLink('/upload', 'Share Story', FiUploadCloud)}
+            {/* Admin — only the admin */}
+            {user?.role === 'admin' && navLink('/admin', 'Admin', FiShield)}
+          </div>
+        </div>
 
-          {/* Divider */}
-          <div style={{
-            width: 1,
-            height: 20,
-            background: 'rgba(255,255,255,0.25)',
-            margin: '0 0.5rem',
-          }} />
-
-          {/* Social icons (top-right) */}
-          <div className="pm-nav-social" aria-label="Social links">
+        {/* GROUP 3: Far Right (Social + Auth) */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          
+          {/* Social icons */}
+          <div className="pm-nav-social" aria-label="Social links" style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
             <a className="pm-nav-social__icon" href="https://facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook">
               <FaFacebookF />
             </a>
@@ -126,8 +127,15 @@ export default function Navbar() {
             </button>
           </div>
 
+          {/* Divider */}
+          <div style={{
+            width: 1,
+            height: 20,
+            background: 'rgba(255,255,255,0.25)',
+          }} />
+
+          {/* Auth Section */}
           {isLoggedIn ? (
-            /* Logged in: avatar + logout */
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Link
                 to="/profile"
@@ -210,7 +218,6 @@ export default function Navbar() {
               </button>
             </div>
           ) : (
-            /* Not logged in: Sign In link */
             <Link
               to="/login"
               style={{

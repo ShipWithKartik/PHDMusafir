@@ -75,3 +75,19 @@ export const getJourneyPins = async () => {
   const response = await api.get('/stories/map-pins');
   return response.data;
 };
+
+/**
+ * Fetch the 5 most recent content items (stories + accepted blogs).
+ */
+export const getRecentContent = async () => {
+  const response = await api.get('/stories/recent');
+  return response.data;
+};
+
+/**
+ * Fetch per-city aggregated stats (story count + blog count).
+ */
+export const getCityStats = async () => {
+  const response = await api.get('/stories/city-stats');
+  return response.data;
+};

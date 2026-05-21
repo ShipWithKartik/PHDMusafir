@@ -16,10 +16,13 @@ import CityJournal from './pages/CityJournal';
 import CategoryBlogs from './pages/CategoryBlogs';
 import BlogDetail from './pages/BlogDetail';
 import WriteBlog from './pages/WriteBlog';
+import JournalSlug from './pages/JournalSlug';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
+import LandingFeatured from './components/LandingFeatured';
 import AboutSection from './components/AboutSection';
+import Footer from './components/Footer';
 import { IMAGES } from './config/images';
 
 /* ─────────────────────────────────────────────────────────
@@ -399,15 +402,16 @@ function HomePage() {
               variants={item}
               style={{
                 fontFamily: 'var(--font-serif)',
-                fontSize: 'clamp(3.8rem, 11vw, 8.5rem)',
+                fontSize: 'clamp(2.4rem, 7vw, 5.5rem)',
                 fontWeight: 700,
                 color: '#fff',
-                lineHeight: 0.98,
+                lineHeight: 1.05,
                 letterSpacing: '-0.02em',
                 margin: 0,
+                whiteSpace: 'nowrap',
               }}
             >
-              PHD<span style={{ color: '#D4CDBC' }}>Musafir</span>
+              PHD<span style={{ color: '#D4CDBC', fontStyle: 'italic' }}>Musafir</span>
             </motion.h1>
 
             {/* ③ Tagline */}
@@ -537,8 +541,14 @@ function HomePage() {
       {/* ── World Map Section ── */}
       <WorldMapSection />
 
-      {/* ── About Section (extends landing page) ── */}
+      {/* ── Landing section 1 (rebuild): Featured Stories ── */}
+      <LandingFeatured />
+
+      {/* ── About Section ── */}
       <AboutSection />
+
+      {/* ── Footer ── */}
+      <Footer />
     </>
   );
 }
@@ -603,8 +613,8 @@ function App() {
             <Route path="/journal/city/:city" element={<CityJournal />} />
             {/* Level 3 — Story List (city + category) */}
             <Route path="/journal/city/:city/:category" element={<CategoryBlogs />} />
-            {/* Blog Detail — MongoDB ObjectId never clashes with the literal 'city' prefix */}
-            <Route path="/journal/:id" element={<BlogDetail />} />
+            {/* /journal/:slug handles city slugs and blog ObjectIds safely */}
+            <Route path="/journal/:slug" element={<JournalSlug />} />
             <Route
               path="/write-blog"
               element={

@@ -9,6 +9,8 @@ const {
   deleteStory,
   getStoriesMeta,
   getJourneyPins,
+  getRecentContent,
+  getCityStats,
 } = require('../controllers/storyController');
 
 const upload = require('../middlewares/upload');
@@ -20,6 +22,12 @@ router.get('/meta', getStoriesMeta);
 
 // GET  /api/stories/map-pins    → pin data for journey atlas (stories + blogs)
 router.get('/map-pins', getJourneyPins);
+
+// GET  /api/stories/recent      → 5 most recent items (stories + blogs)
+router.get('/recent', getRecentContent);
+
+// GET  /api/stories/city-stats  → per-city story + blog counts
+router.get('/city-stats', getCityStats);
 
 // GET  /api/stories              → all stories (flat or ?grouped=true)
 router.get('/', getAllStories);

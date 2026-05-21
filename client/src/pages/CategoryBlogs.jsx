@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiArrowLeft, FiBookOpen, FiAlertCircle, FiRefreshCw, FiChevronRight,
-  FiCalendar, FiUser,
+  FiCalendar, FiUser, FiCompass, FiMapPin, FiArrowRight,
 } from 'react-icons/fi';
 import api from '../services/api';
 import { getStaticCoverForCategory } from '../config/images';
@@ -19,6 +19,145 @@ const fmtDate = (iso) =>
 
 const excerpt = (text = '', len = 200) =>
   text.length <= len ? text : text.slice(0, len).trimEnd() + '…';
+
+const EXPLORE_STORIES_IMG = 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1600&auto=format&fit=crop';
+
+/* ── Explore card (editorial magazine style) ───────── */
+function ExploreCard({ image, eyebrow, title, subtitle, to }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <Link
+      to={to}
+      style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        style={{
+          position: 'relative',
+          aspectRatio: '3/4',
+          borderRadius: 16,
+          overflow: 'hidden',
+          cursor: 'pointer',
+          boxShadow: hovered
+            ? '0 20px 50px rgba(0,0,0,0.22)'
+            : '0 4px 16px rgba(0,0,0,0.08)',
+          transition: 'box-shadow 0.45s ease',
+        }}
+      >
+        {/* Background image */}
+        <img
+          src={image}
+          alt={title}
+          loading="lazy"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            transition: 'transform 0.7s ease-out',
+            transform: hovered ? 'scale(1.10)' : 'scale(1)',
+          }}
+        />
+
+        {/* Gradient overlay */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(to top, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.25) 45%, transparent 100%)',
+          transition: 'background 0.4s ease',
+          ...(hovered ? { background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.30) 50%, rgba(0,0,0,0.05) 100%)' } : {}),
+        }} />
+
+        {/* Text content at bottom */}
+        <div style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          width: '100%',
+          padding: 'clamp(1.25rem, 3vw, 2rem)',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-end',
+        }}>
+          {/* Eyebrow / category tag */}
+          {eyebrow && (
+            <p style={{
+              fontSize: '0.6rem',
+              fontWeight: 700,
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: '#E8A87C',
+              marginBottom: '0.65rem',
+              transition: 'transform 0.5s ease',
+              transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+            }}>
+              {eyebrow}
+            </p>
+          )}
+
+          {/* Title */}
+          <h3 style={{
+            fontFamily: 'var(--font-serif)',
+            fontSize: 'clamp(1.25rem, 2.5vw, 1.65rem)',
+            fontWeight: 700,
+            color: '#fff',
+            lineHeight: 1.2,
+            letterSpacing: '-0.01em',
+            margin: '0 0 0.45rem',
+            transition: 'transform 0.5s ease',
+            transitionDelay: '0.04s',
+            transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
+            textShadow: '0 2px 12px rgba(0,0,0,0.4)',
+          }}>
+            {title}
+          </h3>
+
+          {/* Subtitle + arrow */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            overflow: 'hidden',
+          }}>
+            {subtitle && (
+              <p style={{
+                fontSize: '0.78rem',
+                color: 'rgba(255,255,255,0.65)',
+                fontFamily: 'var(--font-sans)',
+                fontWeight: 500,
+                margin: 0,
+                transition: 'transform 0.5s ease',
+                transitionDelay: '0.08s',
+                transform: hovered ? 'translateY(-2px)' : 'translateY(0)',
+              }}>
+                {subtitle}
+              </p>
+            )}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              fontSize: '1rem',
+              color: '#E8A87C',
+              transition: 'opacity 0.5s ease, transform 0.5s ease',
+              transitionDelay: '0.12s',
+              opacity: hovered ? 1 : 0,
+              transform: hovered ? 'translateX(0)' : 'translateX(-12px)',
+            }}>
+              <FiArrowRight />
+            </span>
+          </div>
+        </div>
+      </motion.div>
+    </Link>
+  );
+}
 
 /* ── Skeleton row ─────────────────────────────────────── */
 function SkeletonRow() {
@@ -175,9 +314,10 @@ export default function CategoryBlogs() {
   const cityName = fromSlug(citySlug);
   const categoryName = fromSlug(catSlug);
 
-  const [blogs,   setBlogs]   = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
+  const [blogs,    setBlogs]    = useState([]);
+  const [allBlogs, setAllBlogs] = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState('');
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -186,6 +326,7 @@ export default function CategoryBlogs() {
         setLoading(true); setError('');
         const res = await api.get('/blogs');
         const all = res.data.data || [];
+        setAllBlogs(all);
         const filtered = all.filter(
           (b) =>
             b.city?.toLowerCase() === cityName.toLowerCase() &&
@@ -413,6 +554,93 @@ export default function CategoryBlogs() {
               ))}
             </AnimatePresence>
           )}
+
+          {/* ── Continue Exploring ── */}
+          {!loading && !error && blogs.length > 0 && (() => {
+            // Card 2: Same city, different category
+            const sameCityDiffCat = allBlogs.find(
+              (b) =>
+                b.city?.toLowerCase() === cityName.toLowerCase() &&
+                b.category?.toLowerCase() !== categoryName.toLowerCase()
+            );
+
+            // Card 3: Different city
+            const diffCity = allBlogs.find(
+              (b) => b.city?.toLowerCase() !== cityName.toLowerCase()
+            );
+
+            // Only render if at least one dynamic card exists
+            const hasContent = sameCityDiffCat || diffCity;
+
+            return (
+              <section style={{
+                marginTop: '6rem',
+                paddingTop: '3.5rem',
+                borderTop: '1px solid #E8E0D8',
+              }}>
+                {/* Heading with decorative lines */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '1.25rem',
+                  marginBottom: '2.75rem',
+                }}>
+                  <div style={{ flex: 1, maxWidth: 80, height: 1, background: 'linear-gradient(to right, transparent, #D4CDBC)' }} />
+                  <p style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.3em',
+                    textTransform: 'uppercase',
+                    color: '#9A9A9A',
+                    fontFamily: 'var(--font-sans)',
+                    margin: 0,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    Continue Exploring
+                  </p>
+                  <div style={{ flex: 1, maxWidth: 80, height: 1, background: 'linear-gradient(to left, transparent, #D4CDBC)' }} />
+                </div>
+
+                <div className="explore-grid" style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gap: '1.25rem',
+                }}>
+                  {/* Card 1: Explore Visual Stories (static) */}
+                  <ExploreCard
+                    image={EXPLORE_STORIES_IMG}
+                    eyebrow="Visual Stories"
+                    title="Explore Visual Stories"
+                    subtitle="Discover photo stories"
+                    to="/discover"
+                  />
+
+                  {/* Card 2: Same city, different category */}
+                  {sameCityDiffCat && (
+                    <ExploreCard
+                      image={sameCityDiffCat.images?.[0]?.url || EXPLORE_STORIES_IMG}
+                      eyebrow={sameCityDiffCat.category}
+                      title={`More in ${cityName}`}
+                      subtitle={`Explore ${sameCityDiffCat.category}`}
+                      to={`/journal/city/${citySlug}/${sameCityDiffCat.category?.toLowerCase()}`}
+                    />
+                  )}
+
+                  {/* Card 3: Different city */}
+                  {diffCity && (
+                    <ExploreCard
+                      image={diffCity.images?.[0]?.url || EXPLORE_STORIES_IMG}
+                      eyebrow={diffCity.city}
+                      title={`Discover ${diffCity.city}`}
+                      subtitle={diffCity.title}
+                      to={`/journal/${diffCity._id}`}
+                    />
+                  )}
+                </div>
+              </section>
+            );
+          })()}
         </div>
       </div>
 
@@ -429,6 +657,12 @@ export default function CategoryBlogs() {
           article { flex-direction: column !important; }
           article > a { width: 100% !important; }
           article img { min-height: 200px !important; }
+        }
+        @media (max-width: 860px) {
+          .explore-grid { grid-template-columns: 1fr !important; max-width: 400px; margin-left: auto; margin-right: auto; }
+        }
+        @media (min-width: 861px) and (max-width: 1024px) {
+          .explore-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
       `}</style>
     </>

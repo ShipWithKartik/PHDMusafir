@@ -59,12 +59,13 @@ export default function Login() {
           <Link to="/" style={{ textDecoration: 'none' }}>
             <h1 style={{
               fontFamily: 'var(--font-serif)',
-              fontSize: '2rem',
+              fontSize: '1.8rem',
               fontWeight: 700,
               color: 'var(--travel-blue)',
               margin: 0,
+              whiteSpace: 'nowrap',
             }}>
-              PHD<span style={{ color: '#D4CDBC' }}>Musafir</span>
+              PHD<span style={{ color: '#D4CDBC', fontStyle: 'italic' }}>Musafir</span>
             </h1>
           </Link>
           <p style={{

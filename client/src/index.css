@@ -34,10 +34,12 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* prevent zoom-out horizontal drift */
 }
 
 #root {
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Utility classes */
@@ -102,7 +104,7 @@ body {
 }
 
 /* ---------------------------------------------------------
-   PhD Musafir UI additions (modular, theme-consistent)
+   PHDMusafir UI additions (modular, theme-consistent)
 --------------------------------------------------------- */
 .pm-container {
   max-width: 1152px;
@@ -111,7 +113,7 @@ body {
 }
 
 .pm-section {
-  padding: clamp(4rem, 7vw, 6rem) 0;
+  padding: clamp(5rem, 8vw, 7rem) 0;
   background: var(--bg, #F8F5F1);
 }
 
@@ -132,6 +134,8 @@ body {
   letter-spacing: -0.02em;
   color: #1A1A1A;
   margin: 0 0 1rem;
+  margin-bottom: 1.2rem;
+  line-height: 1.2;
 }
 
 .pm-body {
@@ -141,6 +145,7 @@ body {
   color: var(--text-muted);
   margin: 0;
   max-width: 56ch;
+  margin-top: 0.6rem;
 }
 
 .pm-btn {
@@ -175,14 +180,18 @@ body {
 
 .pm-about__grid {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
-  gap: clamp(1.75rem, 4vw, 3rem);
   align-items: center;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(2rem, 5vw, 4rem);
+  max-width: 1152px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
 }
 
 .pm-about__collage {
   position: relative;
   min-height: 340px;
+  isolation: isolate;
 }
 
 .pm-about__photo {
@@ -225,16 +234,25 @@ body {
 }
 
 .pm-about__content {
-  background: rgba(255, 255, 255, 0.75);
+  background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(232, 224, 216, 0.9);
   border-radius: 18px;
-  padding: clamp(1.25rem, 3vw, 2rem);
+  padding: clamp(1.5rem, 3vw, 2.2rem);
   box-shadow: var(--shadow-sm);
   backdrop-filter: blur(10px);
+
+  width: 100%;
+  max-width: 520px;
+}
+
+/* Prevent collage shadows from visually "spilling" into adjacent sections */
+.pm-about {
+  position: relative;
+  z-index: 0;
 }
 
 .pm-about__actions {
-  margin-top: 1.6rem;
+  margin-top: 1.8rem;
 }
 
 @media (max-width: 900px) {
@@ -391,7 +409,9 @@ body {
 }
 
 .pm-post-nav {
-  margin-top: 2.75rem;
+  margin-top: 0;
+  padding-top: 2.5rem;
+  border-top: 1px solid var(--border);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;

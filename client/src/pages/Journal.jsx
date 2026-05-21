@@ -49,6 +49,7 @@ function CityCard({ city, blogs, index }) {
       initial={{ opacity: 0, y: 28 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: index * 0.08 }}
+      style={{ height: '100%' }}
     >
       <Link
         to={`/journal/city/${fmtSlug(city)}`}
@@ -64,12 +65,16 @@ function CityCard({ city, blogs, index }) {
           transition: 'box-shadow 0.35s ease, transform 0.35s ease',
           transform: hovered ? 'translateY(-8px)' : 'translateY(0)',
           cursor: 'pointer',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
         }}>
 
-          {/* Cover image */}
+          {/* Cover image — aspect-[4/3] keeps uniform height across all cards */}
           <div style={{
-            height: 240, overflow: 'hidden', position: 'relative',
+            aspectRatio: '4 / 3', overflow: 'hidden', position: 'relative',
             background: 'linear-gradient(135deg, #3B5F54, #2A483E)',
+            flexShrink: 0,
           }}>
             {coverUrl ? (
               <img
@@ -144,11 +149,12 @@ function CityCard({ city, blogs, index }) {
             </div>
           </div>
 
-          {/* Card footer */}
+          {/* Card footer — always anchored to bottom via flex-col + mt-auto */}
           <div style={{
             padding: '1rem 1.4rem 1.15rem',
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             gap: '0.75rem',
+            marginTop: 'auto',
           }}>
             {/* Category mini-pills */}
             <div style={{
@@ -337,7 +343,6 @@ export default function Journal() {
     cityMap[city].push(b);
   });
   const cities = Object.keys(cityMap);
-
   return (
     <>
       <div style={{ minHeight: '100vh', background: 'var(--bg, #F8F5F1)', paddingTop: 80 }}>
@@ -370,19 +375,98 @@ export default function Journal() {
         {/* Thin rule */}
         <div style={{ maxWidth: 120, margin: '3rem auto 0', borderTop: '2px solid var(--border, #E4DFD8)' }} />
 
-        {/* Section label */}
-        <div style={{ textAlign: 'center', padding: '1.75rem 1rem 0' }}>
-          <p style={{
-            fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.28em',
-            textTransform: 'uppercase', color: 'var(--text-light, #9A9A9A)',
-            fontFamily: 'var(--font-sans)',
+        {/* ── Constrained content wrapper — equal left + right margins ── */}
+        <div style={{
+          maxWidth: 1152,
+          margin: '0 auto',
+          padding: '0 clamp(1.5rem, 5vw, 4rem)',
+        }}>
+
+        {/* ── 2-column section header ── */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
+          gap: 'clamp(2rem, 4vw, 3.5rem)',
+          alignItems: 'center',
+          padding: '2.5rem 0 clamp(3rem, 6vw, 5rem)',
+        }}>
+
+          {/* Left — map image */}
+          <div style={{
+            borderRadius: 12,
+            overflow: 'hidden',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.12)',
+            aspectRatio: '4 / 3',
+            flexShrink: 0,
           }}>
-            Search your City · Click it to explore
-          </p>
+            <img
+              src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1200&auto=format&fit=crop"
+              alt="Physical map with magnifying glass"
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+            />
+          </div>
+
+          {/* Right — text */}
+          <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <p style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: '0.62rem',
+              fontWeight: 700,
+              letterSpacing: '0.3em',
+              textTransform: 'uppercase',
+              color: '#C07A4F',
+              marginBottom: '0.85rem',
+            }}>
+              PHDMusafir · Travel Journal
+            </p>
+
+            <h2 style={{
+              fontFamily: 'var(--font-serif)',
+              fontSize: 'clamp(2.6rem, 6vw, 4rem)',
+              fontWeight: 700,
+              color: '#1A1A1A',
+              letterSpacing: '-0.03em',
+              lineHeight: 1.06,
+              margin: '0 0 1.4rem',
+            }}>
+              Search<br />
+              <em style={{ fontStyle: 'italic', color: '#3B5F54' }}>your City.</em>
+            </h2>
+
+            <div style={{
+              width: 48,
+              height: 3,
+              background: 'linear-gradient(90deg, #C07A4F, #D4A45A)',
+              borderRadius: 2,
+              marginBottom: '1.4rem',
+            }} />
+
+            <p style={{
+              fontFamily: 'var(--font-sans)',
+              fontSize: 'clamp(0.9rem, 1.8vw, 1.05rem)',
+              color: '#6B6B6B',
+              lineHeight: 1.75,
+              maxWidth: 400,
+              margin: 0,
+            }}>
+              Pick any destination below and dive into curated stories,
+              category guides, and local experiences — all in one place.
+            </p>
+
+            <p style={{
+              fontFamily: 'var(--font-serif)',
+              fontStyle: 'italic',
+              fontSize: '0.95rem',
+              color: '#9A9A9A',
+              marginTop: '1.1rem',
+            }}>
+              Search it and Click it to explore!
+            </p>
+          </div>
         </div>
 
         {/* Content */}
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '2.5rem 1.25rem 6rem' }}>
+        <section className="pb-20">
 
           {/* Error */}
           {error && (
@@ -409,11 +493,7 @@ export default function Journal() {
 
           {/* Skeletons */}
           {loading && !error && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-              gap: '1.75rem',
-            }}>
+            <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3 place-items-stretch">
               {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
             </div>
           )}
@@ -440,11 +520,7 @@ export default function Journal() {
           {/* City grid */}
           {!loading && !error && cities.length > 0 && (
             <AnimatePresence>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-                gap: '1.75rem',
-              }}>
+              <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-3 place-items-stretch">
                 {cities.map((city, i) => (
                   <CityCard
                     key={city}
@@ -456,7 +532,8 @@ export default function Journal() {
               </div>
             </AnimatePresence>
           )}
-        </div>
+        </section>
+        </div>  {/* end constrained wrapper */}
       </div>
 
       <style>{`

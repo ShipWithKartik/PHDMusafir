@@ -4,6 +4,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   FiX, FiMapPin, FiTag, FiClock, FiShare2, FiBookmark,
 } from 'react-icons/fi';
+import React from 'react';
+import CommentSection from './CommentSection';
+
+/* ── Error boundary for comments ─ */
+class CommentErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) return null; // silently hide comments on error
+    return this.props.children;
+  }
+}
 
 /* Category emoji map */
 const CATEGORY_EMOJI = {
@@ -194,6 +206,15 @@ export default function StoryModal({ story, onClose }) {
                     }}>
                       {description}
                     </p>
+
+                    {/* ── Comments ── */}
+                    <CommentErrorBoundary>
+                      <CommentSection
+                        targetId={story._id}
+                        targetModel="Story"
+                        postAuthorId={story.user?._id || story.user}
+                      />
+                    </CommentErrorBoundary>
                   </div>
                 </div>
 

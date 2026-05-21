@@ -30,7 +30,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Health check route
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'PHDMusafir API is running' });
+  res.json({ status: 'ok', message: 'The Traveler\'s Vellum API is running' });
 });
 
 // Routes
@@ -40,12 +40,14 @@ const userRoutes = require('./routes/userRoutes');
 const journalRoutes = require('./routes/journalRoutes');
 const blogRoutes = require('./routes/blogRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const commentRoutes = require('./routes/commentRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/stories', storyRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/journals', journalRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/comments', commentRoutes);
 
 // 404 handler
 app.use((req, res) => {

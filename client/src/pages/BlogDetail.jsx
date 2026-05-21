@@ -2,10 +2,22 @@ import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiArrowLeft, FiCalendar, FiUser, FiAlertCircle } from 'react-icons/fi';
+import React from 'react';
 import api from '../services/api';
-import PostSidebar from '../components/PostSidebar';
+import DiscoverSidebar from '../components/DiscoverSidebar';
 import PostNavigation from '../components/PostNavigation';
 import RecommendedPosts from '../components/RecommendedPosts';
+import CommentSection from '../components/CommentSection';
+
+/* ── Error boundary for comments ─ */
+class CommentErrorBoundary extends React.Component {
+  constructor(props) { super(props); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 /* ── Helpers ─────────────────────────────────────────── */
 const fmtDate = (iso) =>
@@ -88,7 +100,8 @@ function BlogDetailSkeleton() {
 
 /* ── Main component ──────────────────────────────────── */
 export default function BlogDetail() {
-  const { id } = useParams();
+  const { id, slug } = useParams();
+  const blogId = id || slug;
   const navigate = useNavigate();
   const [blog, setBlog] = useState(null);
   const [allBlogs, setAllBlogs] = useState([]);
@@ -101,7 +114,7 @@ export default function BlogDetail() {
       try {
         setLoading(true); setError('');
         const [detailRes, listRes] = await Promise.all([
-          api.get(`/blogs/${id}`),
+          api.get(`/blogs/${blogId}`),
           api.get('/blogs'),
         ]);
         setBlog(detailRes.data.data);
@@ -112,7 +125,7 @@ export default function BlogDetail() {
         setLoading(false);
       }
     })();
-  }, [id]);
+  }, [blogId]);
 
   if (loading) return (
     <>
@@ -134,22 +147,21 @@ export default function BlogDetail() {
 
   const coverUrl = blog.images?.[0]?.url;
 
-  // Build city counts for sidebar (example: Chandigarh (5), Jammu (6), ...)
-  const cityCounts = allBlogs.reduce((acc, b) => {
-    const city = b.city?.trim();
-    if (!city) return acc;
-    acc[city] = (acc[city] || 0) + 1;
-    return acc;
-  }, {});
-
-  // Determine prev/next by createdAt (newest first)
-  const sorted = [...allBlogs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const idx = sorted.findIndex((b) => b._id === blog._id);
-  const prevPost = idx >= 0 ? sorted[idx + 1] : null; // older
-  const nextPost = idx > 0 ? sorted[idx - 1] : null; // newer
+  // Determine prev/next within the same city + category silo
+  const sameSilo = [...allBlogs]
+    .filter(
+      (b) =>
+        (b.city || '').toLowerCase() === (blog.city || '').toLowerCase() &&
+        (b.category || '').toLowerCase() === (blog.category || '').toLowerCase()
+    )
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); // newest first
+  const siloIdx = sameSilo.findIndex((b) => b._id === blog._id);
+  const prevPost = siloIdx >= 0 && siloIdx < sameSilo.length - 1 ? sameSilo[siloIdx + 1] : null; // older
+  const nextPost = siloIdx > 0 ? sameSilo[siloIdx - 1] : null; // newer
 
   // Recommended: prefer same category, fallback to city, then random
-  const pool = sorted.filter((b) => b._id !== blog._id);
+  const allSorted = [...allBlogs].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const pool = allSorted.filter((b) => b._id !== blog._id);
   const sameCategory = blog.category
     ? pool.filter((b) => (b.category || '').toLowerCase() === blog.category.toLowerCase())
     : [];
@@ -447,9 +459,22 @@ export default function BlogDetail() {
               </div>
             </div>
 
-            {/* Next / Previous + Recommended */}
-            <PostNavigation prevPost={prevPost} nextPost={nextPost} />
+            {/* ── Prev / Next navigation ── */}
+            <div style={{ marginTop: '3.5rem', marginBottom: '2rem' }}>
+              <PostNavigation prevPost={prevPost} nextPost={nextPost} />
+            </div>
             <RecommendedPosts posts={recommended} />
+
+            {/* ── Comment section (bottom of page) ── */}
+            <div style={{ marginTop: '4.5rem' }}>
+              <CommentErrorBoundary>
+                <CommentSection
+                  targetId={blog._id}
+                  targetModel="Blog"
+                  postAuthorId={blog.author?._id}
+                />
+              </CommentErrorBoundary>
+            </div>
 
             {/* Back link */}
             <div style={{ marginTop: '2.5rem', textAlign: 'center' }}>
@@ -473,7 +498,7 @@ export default function BlogDetail() {
           </motion.div>
           </div>
 
-          <PostSidebar cityCounts={cityCounts} />
+          <DiscoverSidebar />
         </div>
       </article>
 
