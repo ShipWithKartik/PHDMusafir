@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiX, FiSave, FiCamera, FiAlertCircle } from 'react-icons/fi';
+import { FiX, FiSave, FiCamera, FiAlertCircle, FiImage } from 'react-icons/fi';
 import toast from 'react-hot-toast';
-import { updateStory } from '../services/storyService';
+import { updateStory, uploadStoryInlineImage } from '../services/storyService';
+import { useAuth } from '../context/AuthContext';
+import { imageToken, stripStoryImages } from '../utils/storyContent';
+import { EMPTY_FILE_MSG, isEmptyFile } from '../utils/fileChecks';
 
 const CATEGORIES = [
   'Adventure', 'Architecture', 'Culture', 'Food', 'History',
@@ -20,6 +23,11 @@ const CATEGORIES = [
  */
 export default function EditStoryModal({ story, onClose, onSaved }) {
   const fileInputRef = useRef(null);
+  const inlineInputRef = useRef(null);
+  const descRef = useRef(null);
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const [inlineUploading, setInlineUploading] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [placeVisited, setPlaceVisited] = useState('');
@@ -53,15 +61,44 @@ export default function EditStoryModal({ story, onClose, onSaved }) {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file || !file.type.startsWith('image/')) return;
+    if (isEmptyFile(file)) { toast.error(EMPTY_FILE_MSG, { duration: 8000 }); return; }
     setNewImage(file);
     setPreview(URL.createObjectURL(file));
+  };
+
+  /* Upload a photo and insert it as its own line at the textarea cursor */
+  const handleInlineFile = async (file) => {
+    if (inlineInputRef.current) inlineInputRef.current.value = '';
+    if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Only JPG, PNG and WEBP photos are allowed.');
+      return;
+    }
+    if (isEmptyFile(file)) { toast.error(EMPTY_FILE_MSG, { duration: 8000 }); return; }
+    const el = descRef.current;
+    const pos = el ? el.selectionEnd : description.length;
+    try {
+      setInlineUploading(true);
+      const { url } = await uploadStoryInlineImage(file);
+      setDescription((prev) => {
+        const at = Math.min(pos, prev.length);
+        const before = prev.slice(0, at).replace(/\s*$/, '');
+        const after = prev.slice(at).replace(/^\s*/, '');
+        return `${before}${before ? '\n\n' : ''}${imageToken(url)}\n\n${after}`;
+      });
+      toast.success('Photo inserted');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Could not upload photo.');
+    } finally {
+      setInlineUploading(false);
+    }
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!title.trim() || !description.trim() || !placeVisited.trim() || !category) {
+    if (!title.trim() || !stripStoryImages(description) || !placeVisited.trim() || !category) {
       setError('Please fill in all required fields.');
       return;
     }
@@ -250,12 +287,40 @@ export default function EditStoryModal({ story, onClose, onSaved }) {
 
               {/* Description */}
               <div>
-                <label style={labelStyle}>Description *</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem' }}>
+                  <label style={labelStyle}>Description *</label>
+                  {isAdmin && (
+                    <button
+                      type="button"
+                      onClick={() => inlineInputRef.current?.click()}
+                      disabled={saving || inlineUploading}
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                        background: 'rgba(59,95,84,0.08)', color: '#3B5F54',
+                        border: 'none', borderRadius: 999, padding: '0.25rem 0.7rem',
+                        fontSize: '0.7rem', fontWeight: 600, marginBottom: '0.4rem',
+                        cursor: (saving || inlineUploading) ? 'wait' : 'pointer',
+                      }}
+                    >
+                      <FiImage /> {inlineUploading ? 'Uploading…' : 'Insert photo'}
+                    </button>
+                  )}
+                </div>
                 <textarea
+                  ref={descRef}
                   value={description} onChange={(e) => setDescription(e.target.value)}
-                  required rows={3} disabled={saving}
-                  style={{ ...inputStyle, resize: 'none', lineHeight: 1.6 }}
+                  required rows={isAdmin ? 6 : 3} disabled={saving}
+                  style={{ ...inputStyle, resize: isAdmin ? 'vertical' : 'none', lineHeight: 1.6 }}
                   onFocus={focusIn} onBlur={focusOut}
+                />
+                {isAdmin && (
+                  <p style={{ fontSize: '0.68rem', color: '#9A9A9A', margin: '0.35rem 0 0' }}>
+                    Photos appear as <code>![](link)</code> lines — delete a line to remove that photo.
+                  </p>
+                )}
+                <input
+                  ref={inlineInputRef} type="file" accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => handleInlineFile(e.target.files[0])} style={{ display: 'none' }}
                 />
               </div>
 

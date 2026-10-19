@@ -6,6 +6,9 @@ import {
 } from 'react-icons/fi';
 import React from 'react';
 import CommentSection from './CommentSection';
+import { parseStoryContent, storyWordCount } from '../utils/storyContent';
+import ImageEditButton from './ImageEditButton';
+import { replaceStoryCover } from '../services/imageEditService';
 
 /* ── Error boundary for comments ─ */
 class CommentErrorBoundary extends React.Component {
@@ -33,7 +36,7 @@ const CATEGORY_EMOJI = {
 };
 const getEmoji = (cat) => CATEGORY_EMOJI[cat] || '📌';
 
-export default function StoryModal({ story, onClose }) {
+export default function StoryModal({ story, onClose, onCoverChange }) {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -70,7 +73,8 @@ export default function StoryModal({ story, onClose }) {
           day: 'numeric', month: 'long', year: 'numeric',
         });
         const emoji = getEmoji(category);
-        const readTime = Math.max(1, Math.ceil((description || '').split(/\s+/).length / 200));
+        const readTime = Math.max(1, Math.ceil(storyWordCount(description) / 200));
+        const blocks = parseStoryContent(description);
 
         return (
           <>
@@ -164,6 +168,15 @@ export default function StoryModal({ story, onClose }) {
                         width: '100%', height: '100%', objectFit: 'cover'
                       }}
                     />
+                    {/* Admin: replace this story's cover image (needs a handler to refresh the view) */}
+                    {onCoverChange && (
+                      <ImageEditButton
+                        title={`Story cover — ${title}`}
+                        currentSrc={image}
+                        onUpload={async (file) => onCoverChange(story._id, await replaceStoryCover(story._id, file))}
+                        style={{ top: '1.5rem', left: '1.5rem', right: 'auto' }}
+                      />
+                    )}
                   </div>
 
                   {/* Written Content */}
@@ -195,17 +208,36 @@ export default function StoryModal({ story, onClose }) {
                       {title}
                     </h2>
 
-                    {/* Description set in serif, large leading */}
-                    <p style={{
-                      fontFamily: 'var(--font-serif)',
-                      fontSize: 'clamp(1.1rem, 2vw, 1.25rem)',
-                      lineHeight: 1.8,
-                      color: '#4A4A4A',
-                      whiteSpace: 'pre-line',
-                      margin: 0,
-                    }}>
-                      {description}
-                    </p>
+                    {/* Description set in serif, large leading — with any inline photos */}
+                    {blocks.map((block, i) => (
+                      block.type === 'image' ? (
+                        <img
+                          key={i}
+                          src={block.url}
+                          alt=""
+                          loading="lazy"
+                          style={{
+                            display: 'block',
+                            width: '100%',
+                            maxHeight: 560,
+                            objectFit: 'cover',
+                            borderRadius: 6,
+                            margin: '1.75rem 0',
+                          }}
+                        />
+                      ) : (
+                        <p key={i} style={{
+                          fontFamily: 'var(--font-serif)',
+                          fontSize: 'clamp(1.1rem, 2vw, 1.25rem)',
+                          lineHeight: 1.8,
+                          color: '#4A4A4A',
+                          whiteSpace: 'pre-line',
+                          margin: i === 0 ? 0 : '1.2rem 0 0',
+                        }}>
+                          {block.value}
+                        </p>
+                      )
+                    ))}
 
                     {/* ── Comments ── */}
                     <CommentErrorBoundary>

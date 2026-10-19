@@ -1,13 +1,15 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FiUploadCloud, FiCompass, FiHome, FiLogIn, FiLogOut, FiBook, FiShield, FiPenTool, FiSearch } from 'react-icons/fi';
+import { FiUploadCloud, FiCompass, FiHome, FiLogIn, FiLogOut, FiBook, FiShield, FiPenTool, FiSearch, FiImage } from 'react-icons/fi';
 import { FaFacebookF, FaPinterestP, FaInstagram, FaYoutube, FaAmazon } from 'react-icons/fa';
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useSiteImages } from '../context/SiteImagesContext';
 
 export default function Navbar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, isLoggedIn, logoutUser } = useAuth();
+  const { editMode, setEditMode } = useSiteImages();
   const isHero = pathname === '/' || pathname === '/discover';
   const [scrolled, setScrolled] = useState(false);
 
@@ -87,12 +89,34 @@ export default function Navbar() {
             {navLink('/discover', 'Discover', FiCompass)}
             {/* Journal — visible to everyone */}
             {navLink('/journal', 'Journal', FiBook, true)}
-            {/* Write a Blog — only logged-in non-admin users */}
-            {isLoggedIn && user?.role !== 'admin' && navLink('/write-blog', 'Write a Blog', FiPenTool, true)}
-            {/* Share Story — only logged-in non-admin users */}
-            {isLoggedIn && user?.role !== 'admin' && navLink('/upload', 'Share Story', FiUploadCloud)}
+            {/* Write a Post — only logged-in non-admin users */}
+            {isLoggedIn && user?.role !== 'admin' && navLink('/write-blog', 'Write a Post', FiPenTool, true)}
+            {/* Share Story — only the admin can publish stories */}
+            {user?.role === 'admin' && navLink('/upload', 'Share Story', FiUploadCloud)}
             {/* Admin — only the admin */}
             {user?.role === 'admin' && navLink('/admin', 'Admin', FiShield)}
+            {/* Admin — show/hide the in-place "Change image" buttons */}
+            {user?.role === 'admin' && (
+              <button
+                type="button"
+                onClick={() => setEditMode(!editMode)}
+                title={editMode ? 'Hide the "Change image" buttons' : 'Show "Change image" buttons on every image'}
+                aria-pressed={editMode}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
+                  padding: '0.4rem 0.8rem', marginLeft: '0.3rem',
+                  borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
+                  fontFamily: 'var(--font-sans)', fontSize: '0.78rem', fontWeight: 600,
+                  color: '#fff',
+                  background: editMode ? 'rgba(192,122,79,0.85)' : 'rgba(255,255,255,0.10)',
+                  border: `1px solid ${editMode ? 'rgba(255,255,255,0.35)' : 'rgba(255,255,255,0.22)'}`,
+                  transition: 'background 0.2s ease',
+                }}
+              >
+                <FiImage style={{ fontSize: '0.9rem' }} />
+                Edit images: {editMode ? 'On' : 'Off'}
+              </button>
+            )}
           </div>
         </div>
 

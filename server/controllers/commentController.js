@@ -68,7 +68,23 @@ const getComments = async (req, res) => {
 };
 
 /**
- * @desc    Delete a comment (only by its author)
+ * Delete a comment together with every reply beneath it (any depth).
+ * Returns the number of comments removed.
+ */
+const deleteCommentTree = async (rootId) => {
+  const ids = [rootId];
+  let frontier = [rootId];
+  while (frontier.length) {
+    const children = await Comment.find({ parentCommentId: { $in: frontier } }).select('_id');
+    frontier = children.map((c) => c._id);
+    ids.push(...frontier);
+  }
+  const result = await Comment.deleteMany({ _id: { $in: ids } });
+  return result.deletedCount || 0;
+};
+
+/**
+ * @desc    Delete a comment (by its author, or by an admin for moderation)
  * @route   DELETE /api/comments/:id
  * @access  Private
  */
@@ -79,14 +95,15 @@ const deleteComment = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Comment not found' });
     }
 
-    // Only the author can delete their own comment
-    if (comment.author.toString() !== req.user._id.toString()) {
+    // The author can delete their own comment; admins can delete any comment
+    const isOwner = comment.author.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({ success: false, message: 'Not authorized to delete this comment' });
     }
 
-    // Also delete all child replies
-    await Comment.deleteMany({ parentCommentId: comment._id });
-    await comment.deleteOne();
+    // Also delete all replies in the thread
+    await deleteCommentTree(comment._id);
 
     res.status(200).json({ success: true, message: 'Comment deleted' });
   } catch (error) {
@@ -95,4 +112,85 @@ const deleteComment = async (req, res) => {
   }
 };
 
-module.exports = { createComment, getComments, deleteComment };
+/* ─────────────────────────────────────────
+   ADMIN-ONLY HANDLERS
+───────────────────────────────────────── */
+
+/**
+ * @desc    Get all comments across stories and posts (moderation queue),
+ *          newest first, each annotated with the title of the post it is on
+ * @route   GET /api/admin/comments
+ * @access  Admin
+ * @query   targetModel? ('Story' | 'Blog'), limit? (default 500)
+ */
+const adminGetAllComments = async (req, res) => {
+  try {
+    const Story = require('../models/Story');
+    const Blog = require('../models/Blog');
+
+    const filter = {};
+    if (req.query.targetModel === 'Story' || req.query.targetModel === 'Blog') {
+      filter.targetModel = req.query.targetModel;
+    }
+    const limit = Math.min(parseInt(req.query.limit, 10) || 500, 2000);
+
+    const comments = await Comment.find(filter)
+      .populate('author', 'name email profilePicture')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean();
+
+    // Resolve the title of each comment's target post
+    const storyIds = comments.filter((c) => c.targetModel === 'Story').map((c) => c.targetId);
+    const blogIds = comments.filter((c) => c.targetModel === 'Blog').map((c) => c.targetId);
+
+    const [stories, blogs] = await Promise.all([
+      storyIds.length ? Story.find({ _id: { $in: storyIds } }).select('title placeVisited').lean() : [],
+      blogIds.length ? Blog.find({ _id: { $in: blogIds } }).select('title city status').lean() : [],
+    ]);
+
+    const targets = {};
+    stories.forEach((s) => { targets[String(s._id)] = { title: s.title, city: s.placeVisited }; });
+    blogs.forEach((b) => { targets[String(b._id)] = { title: b.title, city: b.city, status: b.status }; });
+
+    const data = comments.map((c) => ({
+      ...c,
+      target: targets[String(c.targetId)] || null, // null → post no longer exists
+    }));
+
+    res.status(200).json({ success: true, count: data.length, data });
+  } catch (error) {
+    console.error('adminGetAllComments error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+/**
+ * @desc    Delete any comment (and its replies) as a moderator
+ * @route   DELETE /api/admin/comments/:id
+ * @access  Admin
+ */
+const adminDeleteComment = async (req, res) => {
+  try {
+    const comment = await Comment.findById(req.params.id);
+    if (!comment) {
+      return res.status(404).json({ success: false, message: 'Comment not found' });
+    }
+
+    const deleted = await deleteCommentTree(comment._id);
+
+    res.status(200).json({ success: true, message: 'Comment deleted', deleted });
+  } catch (error) {
+    console.error('adminDeleteComment error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+module.exports = {
+  createComment,
+  getComments,
+  deleteComment,
+  // Admin
+  adminGetAllComments,
+  adminDeleteComment,
+};

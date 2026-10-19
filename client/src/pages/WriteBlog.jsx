@@ -8,6 +8,7 @@ import {
 import { PiQuotesFill } from 'react-icons/pi';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { EMPTY_FILE_MSG, isEmptyFile } from '../utils/fileChecks';
 
 /* ── Constants ─────────────────────────────────────────── */
 const MAX_WORDS = 2000;
@@ -70,12 +71,12 @@ export default function WriteBlog() {
         const myBlogs = res.data.data || [];
         const blog = myBlogs.find(b => b._id === editId);
         if (!blog) {
-          toast.error('Blog not found or you do not have permission to edit it.');
+          toast.error('Post not found or you do not have permission to edit it.');
           navigate('/profile');
           return;
         }
         if (blog.status !== 'accepted' && blog.status !== 'rejected') {
-          toast.error(`This blog cannot be edited (status: ${blog.status}).`);
+          toast.error(`This post cannot be edited (status: ${blog.status}).`);
           navigate('/profile');
           return;
         }
@@ -93,7 +94,7 @@ export default function WriteBlog() {
           editorRef.current.innerText = blog.content || '';
         }
       } catch (err) {
-        toast.error('Failed to load blog data.');
+        toast.error('Failed to load post data.');
         navigate('/profile');
       } finally {
         setFetchingBlog(false);
@@ -117,6 +118,11 @@ export default function WriteBlog() {
   const addFile = (incoming) => {
     const f = Array.from(incoming)[0];
     if (!f) return;
+    if (isEmptyFile(f)) {
+      toast.error(EMPTY_FILE_MSG, { duration: 8000 });
+      setErrors(p => ({ ...p, image: 'The selected image is empty (0 bytes) — please choose it again.' }));
+      return;
+    }
     setFile(f);
     setExistingCover(null); // user chose a new image, discard existing reference
     setErrors(p => ({ ...p, image: undefined }));
@@ -181,7 +187,7 @@ export default function WriteBlog() {
         >
           <FiLoader style={{ fontSize: '2rem', color: '#3B5F54', animation: 'spin 1s linear infinite' }} />
           <p style={{ color: 'var(--text-muted)', marginTop: '1rem', fontFamily: 'var(--font-sans)' }}>
-            Loading blog…
+            Loading post…
           </p>
         </motion.div>
       </div>
@@ -220,10 +226,10 @@ export default function WriteBlog() {
           </h2>
           <p style={{ color: 'var(--text-muted)', lineHeight: 1.75, fontSize: '0.92rem', marginBottom: '2rem' }}>
             {wasAccepted
-              ? 'Your edits have been submitted. The blog has been moved back to Pending and will be invisible in the public Journal until the Admin reviews and re-approves it.'
+              ? 'Your edits have been submitted. The post has been moved back to Pending and will be invisible in the public Journal until the Admin reviews and re-approves it.'
               : isEditMode
-                ? 'Your revised blog has been resubmitted for admin review. You\'ll find it under My Blogs in your profile.'
-                : 'Your blog has been submitted for admin review. You\'ll find it under My Blogs in your profile while it awaits approval.'
+                ? 'Your revised post has been resubmitted for admin review. You\'ll find it under My Posts in your profile.'
+                : 'Your post has been submitted for admin review. You\'ll find it under My Posts in your profile while it awaits approval.'
             }
           </p>
           {wasAccepted && (

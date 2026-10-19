@@ -6,6 +6,11 @@ import {
 } from 'react-icons/fi';
 import api from '../services/api';
 import { getStaticCoverForCity } from '../config/images';
+import { useCategoryCovers, resolveCategoryCover } from '../services/coverService';
+import { useSiteImage } from '../context/SiteImagesContext';
+import { cityImageKey } from '../utils/siteImageKeys';
+import { SiteImageEditButton } from '../components/ImageEditButton';
+import CategoryCoverEditButton from '../components/CategoryCoverEditButton';
 
 /* ── Helpers ──────────────────────────────────────────── */
 const fmtSlug = (s = '') => s.toLowerCase().replace(/\s+/g, '-');
@@ -52,9 +57,10 @@ function SkeletonCard() {
 }
 
 /* ── Category card ────────────────────────────────────── */
-function CategoryCard({ citySlug, category, blogs, index }) {
+function CategoryCard({ citySlug, category, blogs, index, adminCover, cityName, covers }) {
   const [hovered, setHovered] = useState(false);
-  const coverUrl = blogs[0]?.images?.[0]?.url;
+  // Admin-chosen cover first, otherwise the latest post's image (original behaviour)
+  const coverUrl = adminCover || blogs[0]?.images?.[0]?.url;
   const pal = CATEGORY_PALETTE[category] || CATEGORY_PALETTE.Other;
   const count = blogs.length;
 
@@ -109,6 +115,15 @@ function CategoryCard({ citySlug, category, blogs, index }) {
               background: 'linear-gradient(to top, rgba(0,0,0,0.55) 0%, transparent 55%)',
               pointerEvents: 'none',
             }} />
+
+            {/* Admin: replace this category's cover in place */}
+            <CategoryCoverEditButton
+              category={category}
+              city={cityName}
+              covers={covers}
+              currentSrc={coverUrl}
+              style={{ top: '0.85rem', left: '0.85rem', right: 'auto' }}
+            />
 
             {/* Category label over image */}
             <div style={{
@@ -178,6 +193,8 @@ export default function CityJournal() {
   const [blogs,   setBlogs]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
+  const covers = useCategoryCovers();
+  const heroImage = useSiteImage(cityImageKey(cityName), getStaticCoverForCity(cityName));
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -222,7 +239,7 @@ export default function CityJournal() {
           {/* Background — static cover (not "latest post image") */}
           {!loading ? (
             <img
-              src={getStaticCoverForCity(cityName)}
+              src={heroImage}
               alt={cityName}
               style={{
                 position: 'absolute', inset: 0,
@@ -243,6 +260,14 @@ export default function CityJournal() {
             position: 'absolute', inset: 0,
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.25) 45%, rgba(0,0,0,0.65) 100%)',
           }} />
+
+          {/* Admin: replace this city's cover (also used on its Journal card) */}
+          <SiteImageEditButton
+            imageKey={cityImageKey(cityName)}
+            fallback={getStaticCoverForCity(cityName)}
+            title={`${cityName} — city cover`}
+            style={{ top: 100, right: 20 }}
+          />
 
           {/* Back button */}
           <button
@@ -401,7 +426,7 @@ export default function CityJournal() {
                 No entries for {cityName} yet
               </h2>
               <p style={{ fontSize: '0.875rem', color: 'var(--text-light, #9A9A9A)' }}>
-                Check back soon — our editors are curating new stories.
+                Check back soon — our editors are curating new posts.
               </p>
               <Link to="/journal" style={{
                 display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
@@ -428,6 +453,9 @@ export default function CityJournal() {
                     category={cat}
                     blogs={categoryMap[cat]}
                     index={i}
+                    adminCover={resolveCategoryCover(covers, cat, cityName)}
+                    cityName={cityName}
+                    covers={covers}
                   />
                 ))}
               </div>

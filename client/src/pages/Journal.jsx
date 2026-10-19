@@ -6,6 +6,12 @@ import {
 } from 'react-icons/fi';
 import api from '../services/api';
 import { getStaticCoverForCity } from '../config/images';
+import { useSiteImage } from '../context/SiteImagesContext';
+import { cityImageKey } from '../utils/siteImageKeys';
+import { SiteImageEditButton } from '../components/ImageEditButton';
+
+const JOURNAL_HERO_IMG = 'https://images.unsplash.com/photo-1512719994953-eabf50895df7?q=80&w=2670&auto=format&fit=crop';
+const JOURNAL_INTRO_IMG = 'https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1200&auto=format&fit=crop';
 
 /* ── Helpers ──────────────────────────────────────────── */
 const fmtSlug = (s = '') => s.toLowerCase().replace(/\s+/g, '-');
@@ -38,8 +44,8 @@ function SkeletonCard() {
 /* ── City card ────────────────────────────────────────── */
 function CityCard({ city, blogs, index }) {
   const [hovered, setHovered] = useState(false);
-  // Static cover (not "latest post image")
-  const coverUrl = getStaticCoverForCity(city);
+  // Admin-chosen city cover, else the static default (not "latest post image")
+  const coverUrl = useSiteImage(cityImageKey(city), getStaticCoverForCity(city));
 
   /* Count unique categories available */
   const uniqueCats = [...new Set(blogs.map((b) => b.category).filter(Boolean))];
@@ -102,6 +108,14 @@ function CityCard({ city, blogs, index }) {
               pointerEvents: 'none',
             }} />
 
+            {/* Admin: replace this city's cover (also used on the city page banner) */}
+            <SiteImageEditButton
+              imageKey={cityImageKey(city)}
+              fallback={getStaticCoverForCity(city)}
+              title={`${city} — city cover`}
+              style={{ top: 'auto', bottom: 12, right: 12 }}
+            />
+
             {/* City name over image */}
             <div style={{
               position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -145,7 +159,7 @@ function CityCard({ city, blogs, index }) {
               fontSize: '0.62rem', fontWeight: 700,
               color: '#fff', letterSpacing: '0.08em',
             }}>
-              {blogs.length} {blogs.length === 1 ? 'story' : 'stories'}
+              {blogs.length} {blogs.length === 1 ? 'post' : 'posts'}
             </div>
           </div>
 
@@ -202,7 +216,8 @@ function CityCard({ city, blogs, index }) {
 }
 
 /* ── Hero header ──────────────────────────────────────── */
-function JournalHero({ cityCount, storyCount }) {
+function JournalHero({ cityCount, postCount }) {
+  const heroImage = useSiteImage('journal.hero', JOURNAL_HERO_IMG);
   return (
     <div style={{
       position: 'relative',
@@ -214,7 +229,7 @@ function JournalHero({ cityCount, storyCount }) {
       {/* Ken-Burns background */}
       <div style={{ position: 'absolute', inset: '-5%', zIndex: 0 }}>
         <img
-          src="https://images.unsplash.com/photo-1512719994953-eabf50895df7?q=80&w=2670&auto=format&fit=crop"
+          src={heroImage}
           alt="Journal hero"
           style={{
             width: '100%', height: '100%', objectFit: 'cover',
@@ -228,6 +243,14 @@ function JournalHero({ cityCount, storyCount }) {
         position: 'absolute', inset: 0, zIndex: 1,
         background: 'linear-gradient(to bottom, rgba(0,0,0,0.52) 0%, rgba(0,0,0,0.18) 45%, rgba(0,0,0,0.60) 100%)',
       }} />
+
+      {/* Admin: replace the Journal hero image */}
+      <SiteImageEditButton
+        imageKey="journal.hero"
+        fallback={JOURNAL_HERO_IMG}
+        title="Journal page — hero background"
+        style={{ top: 96, right: 20 }}
+      />
 
       {/* Content */}
       <div style={{
@@ -276,7 +299,7 @@ function JournalHero({ cityCount, storyCount }) {
             textShadow: '0 2px 6px rgba(0,0,0,0.4)',
           }}
         >
-          Pick a destination and dive into curated stories, spot guides, and local experiences.
+          Pick a destination and dive into curated posts, spot guides, and local experiences.
         </motion.p>
 
         {cityCount > 0 && (
@@ -305,7 +328,7 @@ function JournalHero({ cityCount, storyCount }) {
               padding: '0.42rem 1.2rem', borderRadius: 999,
             }}>
               <FiBookOpen style={{ fontSize: '0.85rem' }} />
-              {storyCount} {storyCount === 1 ? 'Story' : 'Stories'}
+              {postCount} {postCount === 1 ? 'Post' : 'Posts'}
             </span>
           </motion.div>
         )}
@@ -316,6 +339,7 @@ function JournalHero({ cityCount, storyCount }) {
 
 /* ── Main page ────────────────────────────────────────── */
 export default function Journal() {
+  const introImage = useSiteImage('journal.intro', JOURNAL_INTRO_IMG);
   const [blogs,   setBlogs]   = useState([]);
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState('');
@@ -348,7 +372,7 @@ export default function Journal() {
       <div style={{ minHeight: '100vh', background: 'var(--bg, #F8F5F1)', paddingTop: 80 }}>
 
         {/* Hero */}
-        <JournalHero cityCount={cities.length} storyCount={blogs.length} />
+        <JournalHero cityCount={cities.length} postCount={blogs.length} />
 
         {/* ── Breadcrumb ── */}
         <div style={{
@@ -398,12 +422,14 @@ export default function Journal() {
             boxShadow: '0 16px 48px rgba(0,0,0,0.12)',
             aspectRatio: '4 / 3',
             flexShrink: 0,
+            position: 'relative',
           }}>
             <img
-              src="https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=1200&auto=format&fit=crop"
+              src={introImage}
               alt="Physical map with magnifying glass"
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
             />
+            <SiteImageEditButton imageKey="journal.intro" fallback={JOURNAL_INTRO_IMG} title="Journal page — intro image" />
           </div>
 
           {/* Right — text */}
@@ -449,7 +475,7 @@ export default function Journal() {
               maxWidth: 400,
               margin: 0,
             }}>
-              Pick any destination below and dive into curated stories,
+              Pick any destination below and dive into curated posts,
               category guides, and local experiences — all in one place.
             </p>
 
@@ -465,8 +491,9 @@ export default function Journal() {
           </div>
         </div>
 
-        {/* Content */}
-        <section className="pb-20">
+        {/* Content — bottom spacing is set inline because the global
+            `* { padding: 0 }` reset in index.css overrides Tailwind's pb-* utilities */}
+        <section style={{ paddingBottom: 'clamp(4rem, 9vw, 7rem)' }}>
 
           {/* Error */}
           {error && (

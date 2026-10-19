@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { FaGithub, FaLinkedinIn, FaInstagram, FaYoutube } from 'react-icons/fa';
 import { motion } from 'framer-motion';
+import { useAuth } from '../context/AuthContext';
 
 /* ── Column heading ─────────────────────────────────────────── */
 function ColHeading({ children }) {
@@ -58,6 +59,9 @@ function SocialIcon({ href, Icon, label }) {
 
 /* ── Main Footer ────────────────────────────────────────────── */
 export default function Footer() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+
   return (
     <footer style={{ background: '#141414', color: '#fff' }}>
 
@@ -115,7 +119,10 @@ export default function Footer() {
             {[
               { label: 'Discover Stories', to: '/discover' },
               { label: 'Travel Journal', to: '/journal' },
-              { label: 'Share Your Story', to: '/upload' },
+              // Stories are admin-only; everyone else contributes Posts
+              isAdmin
+                ? { label: 'Share Your Story', to: '/upload' }
+                : { label: 'Write a Post', to: '/write-blog' },
             ].map(({ label, to }) => (
               <Link
                 key={to}

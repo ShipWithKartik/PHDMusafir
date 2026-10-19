@@ -22,6 +22,20 @@ export const uploadStory = async (formData, onProgress) => {
 };
 
 /**
+ * Upload a photo to embed inside a story's text (admin only).
+ * @param {File} file
+ * @returns {Promise<{url: string, publicId: string}>}
+ */
+export const uploadStoryInlineImage = async (file) => {
+  const formData = new FormData();
+  formData.append('image', file);
+  const response = await api.post('/stories/inline-image', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data.data;
+};
+
+/**
  * Update an existing story.
  * @param {string} id - Story ID
  * @param {FormData|Object} data - Fields to update (can include new image as FormData)

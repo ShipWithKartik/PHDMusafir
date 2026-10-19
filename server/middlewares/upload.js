@@ -38,6 +38,24 @@ const blogStorage = new CloudinaryStorage({
   },
 });
 
+// ── Category cover storage (admin-managed Journal covers) ───
+const coverStorage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'phdmusafir/covers',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [
+      {
+        width: 2400,
+        height: 1600,
+        crop: 'limit',
+        quality: 'auto',
+        fetch_format: 'auto',
+      },
+    ],
+  },
+});
+
 // Shared file filter — only allow image MIME types
 const fileFilter = (req, file, cb) => {
   const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
@@ -62,5 +80,13 @@ const uploadBlog = multer({
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB per file
 });
 
+// Category cover uploader — single image
+const uploadCover = multer({
+  storage: coverStorage,
+  fileFilter,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB per file
+});
+
 module.exports = upload;
 module.exports.uploadBlog = uploadBlog;
+module.exports.uploadCover = uploadCover;

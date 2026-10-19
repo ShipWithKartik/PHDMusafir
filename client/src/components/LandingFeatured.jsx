@@ -1,6 +1,8 @@
 import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
+import { useSiteImage } from '../context/SiteImagesContext';
+import { SiteImageEditButton } from './ImageEditButton';
 
 /* ── Card data ──────────────────────────────────────────────── */
 const CARDS = [
@@ -37,6 +39,8 @@ const CARDS = [
 function PortraitCard({ card, delay }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, amount: 0.2 });
+  const imageKey = `home.featured.${card.id}`;
+  const image = useSiteImage(imageKey, card.image);
 
   const btn = card.isExternal ? (
     <a
@@ -71,7 +75,7 @@ function PortraitCard({ card, delay }) {
       {/* ── Portrait image container ── */}
       <div style={cardWrap}>
         <img
-          src={card.image}
+          src={image}
           alt={card.alt}
           style={imgStyle}
           /* CSS hover zoom via inline onMouse — framer handles the card lift */
@@ -80,6 +84,7 @@ function PortraitCard({ card, delay }) {
         />
         {/* Subtle bottom-gradient scrim so the button always reads clearly */}
         <div style={scrimStyle} />
+        <SiteImageEditButton imageKey={imageKey} fallback={card.image} title={`Featured card — ${card.label}`} />
       </div>
 
       {/* ── Floating label button ── */}

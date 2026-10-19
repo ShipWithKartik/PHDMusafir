@@ -1,0 +1,8 @@
+# Secrets — never commit (the server reads server/.env)
+.env
+.env.local
+**/.env
+
+# Dependencies & build output
+node_modules/
+dist/

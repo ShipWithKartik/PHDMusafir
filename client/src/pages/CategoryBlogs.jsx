@@ -7,6 +7,11 @@ import {
 } from 'react-icons/fi';
 import api from '../services/api';
 import { getStaticCoverForCategory } from '../config/images';
+import { useCategoryCovers, resolveCategoryCover } from '../services/coverService';
+import { replacePostCover } from '../services/imageEditService';
+import { useSiteImage } from '../context/SiteImagesContext';
+import ImageEditButton, { SiteImageEditButton } from '../components/ImageEditButton';
+import CategoryCoverEditButton from '../components/CategoryCoverEditButton';
 
 /* ── Helpers ──────────────────────────────────────────── */
 const fromSlug = (s = '') =>
@@ -23,7 +28,7 @@ const excerpt = (text = '', len = 200) =>
 const EXPLORE_STORIES_IMG = 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?q=80&w=1600&auto=format&fit=crop';
 
 /* ── Explore card (editorial magazine style) ───────── */
-function ExploreCard({ image, eyebrow, title, subtitle, to }) {
+function ExploreCard({ image, eyebrow, title, subtitle, to, editButton }) {
   const [hovered, setHovered] = useState(false);
   return (
     <Link
@@ -49,6 +54,9 @@ function ExploreCard({ image, eyebrow, title, subtitle, to }) {
           transition: 'box-shadow 0.45s ease',
         }}
       >
+        {/* Admin: in-place image editor (optional) */}
+        {editButton}
+
         {/* Background image */}
         <img
           src={image}
@@ -185,7 +193,7 @@ function SkeletonRow() {
 }
 
 /* ── Editorial blog row — alternating layout ─────────── */
-function BlogRow({ blog, index }) {
+function BlogRow({ blog, index, onCoverChange }) {
   const [hovered, setHovered] = useState(false);
   const coverUrl = blog.images?.[0]?.url;
   const isEven = index % 2 === 0; // even = text-left / image-right
@@ -269,9 +277,16 @@ function BlogRow({ blog, index }) {
       style={{
         width: 'clamp(200px, 35%, 320px)', flexShrink: 0,
         borderRadius: 14, overflow: 'hidden',
-        display: 'block',
+        display: 'block', position: 'relative',
       }}
     >
+      {/* Admin: replace this post's cover image */}
+      <ImageEditButton
+        title={`Post cover — ${blog.title}`}
+        currentSrc={coverUrl}
+        onUpload={async (file) => onCoverChange?.(blog._id, await replacePostCover(blog._id, file))}
+        compact
+      />
       <img
         src={coverUrl}
         alt={blog.title}
@@ -318,6 +333,15 @@ export default function CategoryBlogs() {
   const [allBlogs, setAllBlogs] = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState('');
+  const covers = useCategoryCovers();
+  const exploreImage = useSiteImage('category.explore', EXPLORE_STORIES_IMG);
+
+  /* After the admin replaces a post cover in place, update it everywhere on this page */
+  const handleCoverChange = (id, images) => {
+    const patch = (list) => list.map((b) => (b._id === id ? { ...b, images } : b));
+    setBlogs(patch);
+    setAllBlogs(patch);
+  };
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -341,8 +365,9 @@ export default function CategoryBlogs() {
     })();
   }, [cityName, categoryName]);
 
-  /* Hero cover — static (not "latest post image") */
-  const heroCover = getStaticCoverForCategory(`${cityName}:${categoryName}`);
+  /* Hero cover — admin-chosen cover if set, otherwise static (not "latest post image") */
+  const heroCover = resolveCategoryCover(covers, categoryName, cityName)
+    || getStaticCoverForCategory(`${cityName}:${categoryName}`);
 
   return (
     <>
@@ -378,6 +403,15 @@ export default function CategoryBlogs() {
             position: 'absolute', inset: 0,
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.50) 0%, rgba(0,0,0,0.25) 40%, rgba(0,0,0,0.68) 100%)',
           }} />
+
+          {/* Admin: replace this category's cover in place */}
+          <CategoryCoverEditButton
+            category={categoryName}
+            city={cityName}
+            covers={covers}
+            currentSrc={heroCover}
+            style={{ top: 100, right: 20 }}
+          />
 
           {/* Back button */}
           <button
@@ -528,7 +562,7 @@ export default function CategoryBlogs() {
                 fontFamily: 'var(--font-serif)', fontSize: '1.4rem',
                 fontWeight: 700, color: '#6B6B6B',
               }}>
-                No stories here yet
+                No posts here yet
               </h2>
               <p style={{ fontSize: '0.875rem', color: '#9A9A9A' }}>
                 No {categoryName} entries have been published for {cityName}.
@@ -550,7 +584,7 @@ export default function CategoryBlogs() {
           {!loading && !error && blogs.length > 0 && (
             <AnimatePresence>
               {blogs.map((blog, i) => (
-                <BlogRow key={blog._id} blog={blog} index={i} />
+                <BlogRow key={blog._id} blog={blog} index={i} onCoverChange={handleCoverChange} />
               ))}
             </AnimatePresence>
           )}
@@ -607,19 +641,33 @@ export default function CategoryBlogs() {
                   gridTemplateColumns: 'repeat(3, 1fr)',
                   gap: '1.25rem',
                 }}>
-                  {/* Card 1: Explore Visual Stories (static) */}
+                  {/* Card 1: link out to the Discover section (static) */}
                   <ExploreCard
-                    image={EXPLORE_STORIES_IMG}
-                    eyebrow="Visual Stories"
-                    title="Explore Visual Stories"
-                    subtitle="Discover photo stories"
+                    image={exploreImage}
+                    editButton={
+                      <SiteImageEditButton
+                        imageKey="category.explore"
+                        fallback={EXPLORE_STORIES_IMG}
+                        title="“Visual Journeys” card (links to Discover)"
+                      />
+                    }
+                    eyebrow="Discover"
+                    title="Visual Journeys"
+                    subtitle="Photo journeys curated by our editors"
                     to="/discover"
                   />
 
                   {/* Card 2: Same city, different category */}
                   {sameCityDiffCat && (
                     <ExploreCard
-                      image={sameCityDiffCat.images?.[0]?.url || EXPLORE_STORIES_IMG}
+                      image={sameCityDiffCat.images?.[0]?.url || exploreImage}
+                      editButton={sameCityDiffCat.images?.[0]?.url && (
+                        <ImageEditButton
+                          title={`Post cover — ${sameCityDiffCat.title}`}
+                          currentSrc={sameCityDiffCat.images[0].url}
+                          onUpload={async (file) => handleCoverChange(sameCityDiffCat._id, await replacePostCover(sameCityDiffCat._id, file))}
+                        />
+                      )}
                       eyebrow={sameCityDiffCat.category}
                       title={`More in ${cityName}`}
                       subtitle={`Explore ${sameCityDiffCat.category}`}
@@ -630,7 +678,14 @@ export default function CategoryBlogs() {
                   {/* Card 3: Different city */}
                   {diffCity && (
                     <ExploreCard
-                      image={diffCity.images?.[0]?.url || EXPLORE_STORIES_IMG}
+                      image={diffCity.images?.[0]?.url || exploreImage}
+                      editButton={diffCity.images?.[0]?.url && (
+                        <ImageEditButton
+                          title={`Post cover — ${diffCity.title}`}
+                          currentSrc={diffCity.images[0].url}
+                          onUpload={async (file) => handleCoverChange(diffCity._id, await replacePostCover(diffCity._id, file))}
+                        />
+                      )}
                       eyebrow={diffCity.city}
                       title={`Discover ${diffCity.city}`}
                       subtitle={diffCity.title}

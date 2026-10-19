@@ -8,6 +8,8 @@ import {
 } from 'react-icons/fi';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import CategoryCoversPanel from '../components/admin/CategoryCoversPanel';
+import CommentsPanel from '../components/admin/CommentsPanel';
 
 /* ─── Helpers ────────────────────────────────────────────── */
 const excerpt = (t = '', n = 120) => (t.length <= n ? t : t.slice(0, n).trimEnd() + '…');
@@ -621,7 +623,9 @@ export default function AdminDashboard() {
         }}
       >
         {label}
-        <Badge count={count} color={active ? 'rgba(255,255,255,0.25)' : accent} />
+        {count !== undefined && (
+          <Badge count={count} color={active ? 'rgba(255,255,255,0.25)' : accent} />
+        )}
       </button>
     );
   };
@@ -656,7 +660,7 @@ export default function AdminDashboard() {
               Journal Dashboard
             </h1>
             <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.85rem', marginTop: '0.4rem' }}>
-              Review, edit, and curate blog submissions.
+              Review and curate post submissions, moderate comments, and manage category covers.
             </p>
           </div>
         </div>
@@ -671,17 +675,26 @@ export default function AdminDashboard() {
             maxWidth: 1100, margin: '0 auto',
             padding: '0.6rem 1.25rem',
             display: 'flex', gap: '0.4rem', alignItems: 'center',
+            flexWrap: 'wrap',
           }}>
             {TAB_BTN('pending',   '🕐 Pending',    pending.length,   '#D97706')}
             {TAB_BTN('published', '✅ Published',  published.length, '#2A483E')}
+            {TAB_BTN('comments',  '💬 Comments',   undefined,        '#7C3AED')}
+            {TAB_BTN('covers',    '🖼️ Category Covers', undefined,   '#0E7490')}
           </div>
         </div>
 
         {/* ── Content ── */}
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '2rem 1.25rem 5rem' }}>
 
+          {/* Comment moderation tab (loads its own data) */}
+          {tab === 'comments' && <CommentsPanel />}
+
+          {/* Category covers tab (loads its own data) */}
+          {tab === 'covers' && <CategoryCoversPanel cities={uniqueCities} />}
+
           {/* Loading */}
-          {loadingData && (
+          {loadingData && (tab === 'pending' || tab === 'published') && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {[1,2,3,4].map(i => (
                 <div key={i} style={{

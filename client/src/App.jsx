@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { FiArrowRight, FiCompass, FiUploadCloud } from 'react-icons/fi';
+import { FiArrowRight, FiCompass, FiUploadCloud, FiPenTool } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { useEffect, useState, useRef, useCallback } from 'react';
@@ -17,7 +17,9 @@ import CategoryBlogs from './pages/CategoryBlogs';
 import BlogDetail from './pages/BlogDetail';
 import WriteBlog from './pages/WriteBlog';
 import JournalSlug from './pages/JournalSlug';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { SiteImagesProvider, useSiteImage } from './context/SiteImagesContext';
+import { SiteImageEditButton } from './components/ImageEditButton';
 import ProtectedRoute from './components/ProtectedRoute';
 import { Toaster } from 'react-hot-toast';
 import LandingFeatured from './components/LandingFeatured';
@@ -292,6 +294,10 @@ function WorldMapSection() {
    Home page
 ───────────────────────────────────────────────────────── */
 function HomePage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
+  const heroImage = useSiteImage('home.hero', IMAGES.homeHero);
+
   /* Stagger orchestration */
   const container = {
     hidden: {},
@@ -314,7 +320,7 @@ function HomePage() {
           style={{
             position: 'absolute',
             inset: '-8%',
-            backgroundImage: `url('${IMAGES.homeHero}')`,
+            backgroundImage: `url('${heroImage}')`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             willChange: 'transform',
@@ -472,10 +478,10 @@ function HomePage() {
                 </Link>
               </MagneticBtn>
 
-              {/* Secondary */}
+              {/* Secondary — admin shares stories; everyone else writes a Post */}
               <MagneticBtn strength={0.18}>
                 <Link
-                  to="/upload"
+                  to={isAdmin ? '/upload' : '/write-blog'}
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -504,8 +510,10 @@ function HomePage() {
                     e.currentTarget.style.borderColor = 'rgba(255,255,255,0.28)';
                   }}
                 >
-                  <FiUploadCloud style={{ fontSize: '1.05rem', flexShrink: 0 }} />
-                  Share Your Story
+                  {isAdmin
+                    ? <FiUploadCloud style={{ fontSize: '1.05rem', flexShrink: 0 }} />
+                    : <FiPenTool style={{ fontSize: '1.05rem', flexShrink: 0 }} />}
+                  {isAdmin ? 'Share Your Story' : 'Write a Post'}
                 </Link>
               </MagneticBtn>
             </motion.div>
@@ -536,6 +544,14 @@ function HomePage() {
 
         {/* Scroll indicator */}
         <ScrollPill />
+
+        {/* Admin: replace the landing background in place */}
+        <SiteImageEditButton
+          imageKey="home.hero"
+          fallback={IMAGES.homeHero}
+          title="Landing page background"
+          style={{ top: 96, right: 20 }}
+        />
       </div>
 
       {/* ── World Map Section ── */}
@@ -559,6 +575,7 @@ function HomePage() {
 function App() {
   return (
     <AuthProvider>
+      <SiteImagesProvider>
       <BrowserRouter>
         <Navbar />
         <main>
@@ -634,6 +651,7 @@ function App() {
           </Routes>
         </main>
       </BrowserRouter>
+      </SiteImagesProvider>
     </AuthProvider>
   );
 }

@@ -25,6 +25,7 @@ function CommentThread({
   allComments,
   postAuthorId,
   currentUserId,
+  isAdmin = false,
   onReply,
   onDelete,
   depth = 0,
@@ -35,6 +36,8 @@ function CommentThread({
 
   const isPostAuthor = comment.author?._id === postAuthorId;
   const isOwnComment = currentUserId && comment.author?._id === currentUserId;
+  // Admins can moderate (remove) any comment
+  const canDelete = isOwnComment || isAdmin;
 
   const handleSubmitReply = async () => {
     if (!replyText.trim()) return;
@@ -195,9 +198,10 @@ function CommentThread({
               Reply
             </button>
           )}
-          {isOwnComment && (
+          {canDelete && (
             <button
-              onClick={() => onDelete(comment._id)}
+              onClick={() => onDelete(comment._id, !isOwnComment)}
+              title={isOwnComment ? 'Delete your comment' : 'Remove this comment (admin)'}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -216,7 +220,7 @@ function CommentThread({
               onMouseLeave={(e) => (e.currentTarget.style.color = '#9A9A9A')}
             >
               <FiTrash2 style={{ fontSize: '0.7rem' }} />
-              Delete
+              {isOwnComment ? 'Delete' : 'Remove'}
             </button>
           )}
         </div>
@@ -291,6 +295,7 @@ function CommentThread({
               allComments={allComments}
               postAuthorId={postAuthorId}
               currentUserId={currentUserId}
+              isAdmin={isAdmin}
               onReply={onReply}
               onDelete={onDelete}
               depth={depth + 1}
@@ -354,8 +359,9 @@ export default function CommentSection({ targetId, targetModel, postAuthorId }) 
     setNewComment('');
   };
 
-  /* Delete a comment */
-  const handleDelete = async (commentId) => {
+  /* Delete a comment (moderation deletes ask for confirmation first) */
+  const handleDelete = async (commentId, asModerator = false) => {
+    if (asModerator && !window.confirm('Remove this comment and all of its replies?')) return;
     try {
       await api.delete(`/comments/${commentId}`);
       await fetchComments();
@@ -599,6 +605,7 @@ export default function CommentSection({ targetId, targetModel, postAuthorId }) 
                 allComments={comments}
                 postAuthorId={postAuthorId}
                 currentUserId={user?._id}
+                isAdmin={user?.role === 'admin'}
                 onReply={handleSubmit}
                 onDelete={handleDelete}
                 depth={0}

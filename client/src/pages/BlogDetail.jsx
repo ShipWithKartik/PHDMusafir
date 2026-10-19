@@ -8,6 +8,8 @@ import DiscoverSidebar from '../components/DiscoverSidebar';
 import PostNavigation from '../components/PostNavigation';
 import RecommendedPosts from '../components/RecommendedPosts';
 import CommentSection from '../components/CommentSection';
+import ImageEditButton from '../components/ImageEditButton';
+import { replacePostCover } from '../services/imageEditService';
 
 /* ── Error boundary for comments ─ */
 class CommentErrorBoundary extends React.Component {
@@ -68,7 +70,7 @@ function ImageGallery({ images }) {
           >
             <img
               src={img.url}
-              alt={`Blog image ${i + 2}`}
+              alt={`Post image ${i + 2}`}
               style={{
                 width: '100%', height: '100%',
                 objectFit: 'cover', display: 'block',
@@ -140,7 +142,7 @@ export default function BlogDetail() {
       flexDirection: 'column', alignItems: 'center', gap: '1rem', textAlign: 'center',
     }}>
       <FiAlertCircle style={{ fontSize: '3rem', color: '#3B5F54' }} />
-      <p style={{ fontWeight: 600, color: '#3B5F54' }}>{error || 'Blog not found.'}</p>
+      <p style={{ fontWeight: 600, color: '#3B5F54' }}>{error || 'Post not found.'}</p>
       <Link to="/journal" style={{ color: '#3B5F54', fontWeight: 600 }}>← Back to Journal</Link>
     </div>
   );
@@ -218,6 +220,17 @@ export default function BlogDetail() {
             position: 'absolute', inset: 0,
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.08) 35%, rgba(0,0,0,0.72) 100%)',
           }} />
+
+          {/* Admin: replace this post's cover image in place */}
+          <ImageEditButton
+            title={`Post cover — ${blog.title}`}
+            currentSrc={coverUrl}
+            onUpload={async (file) => {
+              const images = await replacePostCover(blog._id, file);
+              setBlog((prev) => ({ ...prev, images }));
+            }}
+            style={{ top: 100, right: 20 }}
+          />
 
           {/* Back button */}
           <button
@@ -498,7 +511,7 @@ export default function BlogDetail() {
           </motion.div>
           </div>
 
-          <DiscoverSidebar />
+          <DiscoverSidebar variant="journal" posts={allBlogs} />
         </div>
       </article>
 

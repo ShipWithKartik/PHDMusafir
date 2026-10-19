@@ -11,10 +11,11 @@ const {
   getJourneyPins,
   getRecentContent,
   getCityStats,
+  uploadInlineImage,
 } = require('../controllers/storyController');
 
 const upload = require('../middlewares/upload');
-const { protect } = require('../middlewares/authMiddleware');
+const { protect, adminProtect } = require('../middlewares/authMiddleware');
 
 // ── Public routes ──────────────────────────────────────
 // GET  /api/stories/meta        → unique cities + categories
@@ -36,8 +37,11 @@ router.get('/', getAllStories);
 // GET  /api/stories/my-stories   → stories by the logged-in user
 router.get('/my-stories', protect, getMyStories);
 
-// POST /api/stories              → create a story (auth + image upload)
-router.post('/', protect, upload.single('image'), uploadStory);
+// POST /api/stories              → create a story (admin only + image upload)
+router.post('/', protect, adminProtect, upload.single('image'), uploadStory);
+
+// POST /api/stories/inline-image → upload a photo to embed inside a story's text (admin only)
+router.post('/inline-image', protect, adminProtect, upload.single('image'), uploadInlineImage);
 
 // PATCH /api/stories/:id         → update a story (owner only, optional new image)
 router.patch('/:id', protect, upload.single('image'), updateStory);

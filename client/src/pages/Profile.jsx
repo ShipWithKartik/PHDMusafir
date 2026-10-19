@@ -26,6 +26,7 @@ const getEmoji = (c) => CATEGORY_EMOJI[c] || '📌';
 export default function Profile() {
   const navigate = useNavigate();
   const { user, isLoggedIn } = useAuth();
+  const isAdmin = user?.role === 'admin';
   
   const [activeTab, setActiveTab] = useState('my-stories'); // 'my-stories' | 'saved' | 'my-blogs'
   
@@ -174,7 +175,7 @@ export default function Profile() {
                   <FiBookOpen style={{ fontSize: '0.75rem' }} /> {stories.length} {stories.length === 1 ? 'Story' : 'Stories'}
                 </span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.72rem', color: 'rgba(212,205,188,0.8)', fontWeight: 500 }}>
-                  <FiPenTool style={{ fontSize: '0.75rem' }} /> {blogs.length} {blogs.length === 1 ? 'Blog' : 'Blogs'}
+                  <FiPenTool style={{ fontSize: '0.75rem' }} /> {blogs.length} {blogs.length === 1 ? 'Post' : 'Posts'}
                 </span>
               </div>
             </div>
@@ -235,7 +236,7 @@ export default function Profile() {
                   position: 'relative',
                 }}
               >
-                <FiPenTool style={{ fontSize: '1rem' }} /> My Blogs
+                <FiPenTool style={{ fontSize: '1rem' }} /> My Posts
                 {/* Pending badge */}
                 {blogs.filter(b => b.status === 'pending').length > 0 && (
                   <span style={{
@@ -251,8 +252,8 @@ export default function Profile() {
               </button>
             </div>
 
-            {/* Upload Button — only on stories tabs */}
-            {(activeTab === 'my-stories' || activeTab === 'saved') && (
+            {/* Upload Button — only on stories tabs, only for the admin (stories are admin-only) */}
+            {isAdmin && (activeTab === 'my-stories' || activeTab === 'saved') && (
               <Link
                 to="/upload"
                 style={{
@@ -285,7 +286,7 @@ export default function Profile() {
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
               >
-                <FiPenTool style={{ fontSize: '1rem' }} /> Write a Blog
+                <FiPenTool style={{ fontSize: '1rem' }} /> Write a Post
               </Link>
             )}
           </div>
@@ -339,8 +340,15 @@ export default function Profile() {
                 No stories yet
               </h3>
               <p style={{ fontSize: '0.88rem', color: '#9A9A9A' }}>
-                Share your first travel story and it will appear here!
+                {isAdmin
+                  ? 'Share your first travel story and it will appear here!'
+                  : 'Stories are published by the PHDMusafir team — share your own experience as a Post instead.'}
               </p>
+              {!isAdmin && (
+                <Link to="/write-blog" style={{ marginTop: '0.5rem', padding: '0.65rem 1.4rem', background: 'linear-gradient(135deg,#3B5F54,#2A483E)', color: '#fff', textDecoration: 'none', borderRadius: 10, fontWeight: 600, fontSize: '0.9rem' }}>
+                  Write a Post
+                </Link>
+              )}
             </div>
           )}
 
@@ -525,18 +533,18 @@ export default function Profile() {
             </motion.div>
           )}
 
-          {/* ── My Blogs tab ── */}
+          {/* ── My Posts tab ── */}
           {activeTab === 'my-blogs' && !loadingBlogs && blogs.length === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '5rem 1rem', textAlign: 'center' }}>
               <span style={{ fontSize: '3rem' }}>✍️</span>
               <h3 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.25rem', fontWeight: 700, color: '#6B6B6B' }}>
-                No blogs yet
+                No posts yet
               </h3>
               <p style={{ fontSize: '0.88rem', color: '#9A9A9A' }}>
-                Share your first travel blog — it will appear here once submitted.
+                Share your first travel post — it will appear here once submitted.
               </p>
               <Link to="/write-blog" style={{ marginTop: '0.5rem', padding: '0.65rem 1.4rem', background: 'linear-gradient(135deg,#3B5F54,#2A483E)', color: '#fff', textDecoration: 'none', borderRadius: 10, fontWeight: 600, fontSize: '0.9rem' }}>
-                Write a Blog
+                Write a Post
               </Link>
             </div>
           )}

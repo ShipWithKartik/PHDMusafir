@@ -5,6 +5,13 @@ import { useLocation } from 'react-router-dom';
 import { getAllStories } from '../services/storyService';
 import StoryModal from '../components/StoryModal';
 import DiscoverSidebar from '../components/DiscoverSidebar';
+import { useAuth } from '../context/AuthContext';
+import { stripStoryImages } from '../utils/storyContent';
+import { useSiteImage } from '../context/SiteImagesContext';
+import ImageEditButton, { SiteImageEditButton } from '../components/ImageEditButton';
+import { replaceStoryCover } from '../services/imageEditService';
+
+const DISCOVER_HERO_IMG = 'https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?q=80&w=2669&auto=format&fit=crop';
 
 /* ─── Category emoji map ─────────────────────────────────── */
 const CATEGORY_EMOJI = {
@@ -154,8 +161,9 @@ function DiscoverHeader({ city, category, totalShown, totalAll, bgImage }) {
       ? `A curated collection of stories from ${city}`
       : 'Immerse yourself in a curated collection of authentic, beautiful journeys handpicked for the sophisticated traveler.';
 
-  // Fallback high-quality stock image if none provided
-  const secureBgImage = bgImage || 'https://images.unsplash.com/photo-1506012787146-f92b2d7d6d96?q=80&w=2669&auto=format&fit=crop';
+  // Admin-replaceable hero (falls back to the built-in stock image)
+  const siteHero = useSiteImage('discover.hero', DISCOVER_HERO_IMG);
+  const secureBgImage = bgImage || siteHero;
 
   return (
     <div style={{
@@ -187,6 +195,14 @@ function DiscoverHeader({ city, category, totalShown, totalAll, bgImage }) {
           }}
         />
       </div>
+
+      {/* Admin: replace the Discover hero image */}
+      <SiteImageEditButton
+        imageKey="discover.hero"
+        fallback={DISCOVER_HERO_IMG}
+        title="Stories (Discover) page — hero background"
+        style={{ top: 100, right: 20 }}
+      />
 
       {/* Heavy Scrim for premium text readability */}
       <div style={{
@@ -265,6 +281,8 @@ function DiscoverHeader({ city, category, totalShown, totalAll, bgImage }) {
 /* ─── Main page ──────────────────────────────────────────── */
 export default function Discover() {
   const routerLocation = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [stories, setStories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -323,6 +341,12 @@ export default function Discover() {
     return src.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   }, [stories, selectedCity, selectedCategory]);
 
+  /* After the admin replaces a story cover in place, update the list + open modal */
+  const handleStoryCoverChange = (id, patch) => {
+    setStories((prev) => prev.map((s) => (s._id === id ? { ...s, ...patch } : s)));
+    setSelectedStory((prev) => (prev && prev._id === id ? { ...prev, ...patch } : prev));
+  };
+
   /* City selection resets category */
   const handleCitySelect = (city) => {
     setSelectedCity(city);
@@ -347,7 +371,11 @@ export default function Discover() {
 
   return (
     <>
-      <StoryModal story={selectedStory} onClose={() => setSelectedStory(null)} />
+      <StoryModal
+        story={selectedStory}
+        onClose={() => setSelectedStory(null)}
+        onCoverChange={handleStoryCoverChange}
+      />
 
       <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingTop: 64 }}>
 
@@ -485,10 +513,16 @@ export default function Discover() {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', padding: '6rem 1rem', textAlign: 'center' }}>
               <FiInbox style={{ fontSize: '3.5rem', color: 'rgba(59,95,84,0.3)' }} />
               <h2 style={{ fontFamily: 'var(--font-serif)', fontSize: '1.35rem', fontWeight: 700, color: '#6B6B6B' }}>No stories yet</h2>
-              <p style={{ fontSize: '0.875rem', color: '#9A9A9A' }}>Be the first to share a travel story!</p>
-              <a href="/upload" style={{ marginTop: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'linear-gradient(135deg,#3B5F54,#2A483E)', color: '#fff', fontWeight: 700, padding: '0.7rem 1.4rem', borderRadius: 14, textDecoration: 'none', boxShadow: '0 8px 24px rgba(59,95,84,0.35)' }}>
-                <FiUploadCloud /> Share Your Story
-              </a>
+              {isAdmin ? (
+                <>
+                  <p style={{ fontSize: '0.875rem', color: '#9A9A9A' }}>Be the first to share a travel story!</p>
+                  <a href="/upload" style={{ marginTop: '0.5rem', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'linear-gradient(135deg,#3B5F54,#2A483E)', color: '#fff', fontWeight: 700, padding: '0.7rem 1.4rem', borderRadius: 14, textDecoration: 'none', boxShadow: '0 8px 24px rgba(59,95,84,0.35)' }}>
+                    <FiUploadCloud /> Share Your Story
+                  </a>
+                </>
+              ) : (
+                <p style={{ fontSize: '0.875rem', color: '#9A9A9A' }}>New stories are on their way — check back soon!</p>
+              )}
             </div>
           )}
 
@@ -578,6 +612,12 @@ export default function Discover() {
                           onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.04)'}
                           onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                         />
+                        {/* Admin: replace this story's cover image */}
+                        <ImageEditButton
+                          title={`Story cover — ${story.title}`}
+                          currentSrc={story.image}
+                          onUpload={async (file) => handleStoryCoverChange(story._id, await replaceStoryCover(story._id, file))}
+                        />
                       </div>
 
                       {/* ── Text body ── */}
@@ -634,7 +674,7 @@ export default function Discover() {
                             WebkitBoxOrient: 'vertical',
                             overflow: 'hidden',
                           }}>
-                            {story.description}
+                            {stripStoryImages(story.description)}
                           </p>
                         )}
 

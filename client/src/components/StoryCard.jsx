@@ -3,6 +3,7 @@ import { FiMapPin, FiBookmark } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
 import { toggleBookmark } from '../services/authService';
+import { stripStoryImages } from '../utils/storyContent';
 
 /* Category → emoji map (shared with Discover page) */
 const CATEGORY_EMOJI = {
@@ -247,7 +248,7 @@ export default function StoryCard({ story, onClick }) {
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           }}>
-            {description}
+            {stripStoryImages(description)}
           </p>
         )}
 

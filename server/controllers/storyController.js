@@ -2,6 +2,52 @@ const Story = require('../models/Story');
 const cloudinary = require('../config/cloudinary');
 
 /**
+ * Inline photos are embedded in a story's description as Markdown-style
+ * image lines:  ![](https://res.cloudinary.com/.../phdmusafir/stories/abc.jpg)
+ * These helpers extract the Cloudinary public_ids of photos we uploaded so
+ * they can be cleaned up when they are removed from a story.
+ */
+const INLINE_IMAGE_RE = /!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/g;
+
+const inlinePublicIds = (text = '') => {
+  const ids = new Set();
+  for (const match of String(text).matchAll(INLINE_IMAGE_RE)) {
+    // e.g. .../image/upload/v1712345678/phdmusafir/stories/abc123.jpg → phdmusafir/stories/abc123
+    const m = match[1].match(/\/upload\/(?:[^/]+\/)*?(?:v\d+\/)?(phdmusafir\/[^.]+)\.\w+$/);
+    if (m) ids.add(m[1]);
+  }
+  return ids;
+};
+
+const destroyPublicIds = async (ids) => {
+  await Promise.all(
+    [...ids].map((id) => cloudinary.uploader.destroy(id).catch((err) => {
+      console.warn('Failed to delete inline Cloudinary image:', err.message);
+    }))
+  );
+};
+
+/**
+ * @desc    Upload a photo to embed inside a story's text
+ * @route   POST /api/stories/inline-image
+ * @access  Admin
+ */
+const uploadInlineImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Image is required' });
+    }
+    res.status(201).json({
+      success: true,
+      data: { url: req.file.path, publicId: req.file.filename },
+    });
+  } catch (error) {
+    console.error('uploadInlineImage error:', error);
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
+};
+
+/**
  * @desc    Upload a new story (with image to Cloudinary)
  * @route   POST /api/stories
  * @access  Private (requires auth)
@@ -113,10 +159,14 @@ const updateStory = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Story not found' });
     }
 
-    // Only the owner can update
-    if (!story.user || story.user.toString() !== req.user._id.toString()) {
+    // The owner can update; the admin can update any story (e.g. replace its cover in place)
+    const isOwner = story.user && story.user.toString() === req.user._id.toString();
+    if (!isOwner && req.user.role !== 'admin') {
       return res.status(403).json({ success: false, message: 'Not authorized to edit this story' });
     }
+
+    // Remember which inline photos the story had before this edit
+    const previousInlineIds = inlinePublicIds(story.description);
 
     // Allowed fields to update
     const { title, description, placeVisited, category, tags } = req.body;
@@ -144,6 +194,13 @@ const updateStory = async (req, res) => {
     }
 
     await story.save();
+
+    // Clean up inline photos that were removed from the text in this edit
+    if (description !== undefined) {
+      const currentInlineIds = inlinePublicIds(story.description);
+      const removed = [...previousInlineIds].filter((id) => !currentInlineIds.has(id));
+      if (removed.length) await destroyPublicIds(removed);
+    }
 
     res.status(200).json({
       success: true,
@@ -187,6 +244,9 @@ const deleteStory = async (req, res) => {
         // Don't block story deletion if Cloudinary fails
       }
     }
+
+    // Delete any photos embedded inside the story text
+    await destroyPublicIds(inlinePublicIds(story.description));
 
     // Phase 4: Data Integrity - remove this story from all user bookmarks
     const User = require('../models/User'); // Required here to avoid circular dependencies if any
@@ -534,4 +594,4 @@ const getCityStats = async (req, res) => {
   }
 };
 
-module.exports = { uploadStory, getAllStories, getMyStories, updateStory, deleteStory, getStoriesMeta, getJourneyPins, getRecentContent, getCityStats };
+module.exports = { uploadStory, getAllStories, getMyStories, updateStory, deleteStory, getStoriesMeta, getJourneyPins, getRecentContent, getCityStats, uploadInlineImage };

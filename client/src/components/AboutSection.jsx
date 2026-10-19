@@ -2,6 +2,8 @@ import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
 import { FiCheck } from 'react-icons/fi';
 import { IMAGES } from '../config/images';
+import { useSiteImage } from '../context/SiteImagesContext';
+import { SiteImageEditButton } from './ImageEditButton';
 
 /* ── Feature items ──────────────────────────────────────────── */
 const FEATURES = [
@@ -53,6 +55,10 @@ function FeaturePill({ label }) {
 function ImageStack() {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, amount: 0.25 });
+  // Admin-replaceable collage images (fall back to the built-in defaults)
+  const img1 = useSiteImage('home.about.1', IMAGES.aboutCollage[0]);
+  const img2 = useSiteImage('home.about.2', IMAGES.aboutCollage[1]);
+  const img3 = useSiteImage('home.about.3', IMAGES.aboutCollage[2]);
 
   return (
     <motion.div
@@ -93,10 +99,11 @@ function ImageStack() {
         zIndex: 2,
       }}>
         <img
-          src={IMAGES.aboutCollage[0]}
+          src={img1}
           alt="Travel adventure"
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
+        <SiteImageEditButton imageKey="home.about.1" fallback={IMAGES.aboutCollage[0]} title="About section — main photo" style={{ top: 'auto', bottom: 12, left: 12, right: 'auto' }} />
       </div>
 
       {/* ── Secondary image (bottom-right overlap) ── */}
@@ -113,10 +120,11 @@ function ImageStack() {
         zIndex: 3,
       }}>
         <img
-          src={IMAGES.aboutCollage[1]}
+          src={img2}
           alt="Journey moments"
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
+        <SiteImageEditButton imageKey="home.about.2" fallback={IMAGES.aboutCollage[1]} title="About section — lower photo" compact style={{ top: 'auto', bottom: 8, right: 8 }} />
       </div>
 
       {/* ── Tertiary accent image (top-right chip) ── */}
@@ -133,10 +141,11 @@ function ImageStack() {
         zIndex: 4,
       }}>
         <img
-          src={IMAGES.aboutCollage[2]}
+          src={img3}
           alt="Scenic exploration"
           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
         />
+        <SiteImageEditButton imageKey="home.about.3" fallback={IMAGES.aboutCollage[2]} title="About section — top photo" compact style={{ top: 8, right: 8 }} />
       </div>
 
       {/* ── Floating stat badge ── */}

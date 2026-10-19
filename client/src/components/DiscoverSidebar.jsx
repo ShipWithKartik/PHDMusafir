@@ -53,13 +53,19 @@ function SidebarSkeleton() {
   );
 }
 
-/* ── Main Sidebar ──────────────────────────────────────────── */
-export default function DiscoverSidebar({ onCityFilter }) {
+/* ── Main Sidebar ──────────────────────────────────────────────
+   variant="discover" (default) → Recent Stories + story/post counts, from the API
+   variant="journal"            → Recent Posts + post counts, built from the
+                                  `posts` prop (Journal pages never say "stories")
+─────────────────────────────────────────────────────────────── */
+export default function DiscoverSidebar({ onCityFilter, variant = 'discover', posts = [] }) {
+  const isJournal = variant === 'journal';
   const [recentPosts, setRecentPosts] = useState([]);
   const [cityStats, setCityStats] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!isJournal);
 
   useEffect(() => {
+    if (isJournal) return; // journal variant derives everything from `posts`
     const fetch = async () => {
       try {
         const [recentRes, statsRes] = await Promise.all([
@@ -75,21 +81,46 @@ export default function DiscoverSidebar({ onCityFilter }) {
       }
     };
     fetch();
-  }, []);
+  }, [isJournal]);
 
   if (loading) return <SidebarSkeleton />;
+
+  /* Journal variant: newest accepted posts + per-city post counts */
+  const recentItems = isJournal
+    ? [...posts]
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5)
+        .map((b) => ({
+          _id: b._id, title: b.title, image: b.images?.[0]?.url || '',
+          city: b.city, createdAt: b.createdAt, type: 'blog',
+        }))
+    : recentPosts;
+
+  const statsRows = isJournal
+    ? Object.values(posts.reduce((acc, b) => {
+        const city = b.city?.trim();
+        if (!city) return acc;
+        acc[city] = acc[city] || { city, blogCount: 0, storyCount: 0 };
+        acc[city].blogCount += 1;
+        return acc;
+      }, {})).sort((a, b) => b.blogCount - a.blogCount)
+    : cityStats;
+
+  const citySlug = (city = '') => city.toLowerCase().replace(/\s+/g, '-');
 
   return (
     <aside style={{ position: 'sticky', top: 140, alignSelf: 'start' }}>
 
-      {/* ══ RECENT POST ══ */}
+      {/* ══ RECENT STORIES ══ */}
       <div style={{ marginBottom: '3rem' }}>
-        <SidebarHeading>Recent Post</SidebarHeading>
+        <SidebarHeading>{isJournal ? 'Recent Posts' : 'Recent Stories'}</SidebarHeading>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {recentPosts.map((item) => {
+          {recentItems.map((item) => {
             const isStory = item.type === 'story';
-            const href = isStory ? '/discover' : `/journal/city/${item.city?.toLowerCase()}`;
+            const href = isJournal
+              ? `/journal/${item._id}`
+              : isStory ? '/discover' : `/journal/city/${item.city?.toLowerCase()}`;
 
             return (
               <Link
@@ -157,7 +188,7 @@ export default function DiscoverSidebar({ onCityFilter }) {
                     {fmtDate(item.createdAt)}
                     <span style={{ margin: '0 0.3rem', color: '#D4CDBC' }}>/</span>
                     <span style={{ textTransform: 'uppercase', letterSpacing: '0.1em', color: '#C07A4F', fontWeight: 600 }}>
-                      {isStory ? 'Story' : 'Journal'}
+                      {isJournal ? 'Post' : isStory ? 'Story' : 'Journal'}
                     </span>
                   </p>
                 </div>
@@ -172,7 +203,7 @@ export default function DiscoverSidebar({ onCityFilter }) {
         <SidebarHeading>Cities Statistics</SidebarHeading>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {cityStats.map((row) => (
+          {statsRows.map((row) => (
             <div
               key={row.city}
               style={{
@@ -190,7 +221,21 @@ export default function DiscoverSidebar({ onCityFilter }) {
               onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.02)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
-              {/* City name — clicking filters the Discover feed */}
+              {/* City name — journal: opens the city's Journal page; discover: filters the feed */}
+              {isJournal ? (
+                <Link
+                  to={`/journal/city/${citySlug(row.city)}`}
+                  style={{
+                    fontFamily: 'var(--font-sans)', fontSize: '0.72rem', fontWeight: 700,
+                    letterSpacing: '0.12em', textTransform: 'uppercase',
+                    color: '#2D2D2D', textDecoration: 'none', transition: 'color 0.15s',
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.color = '#C07A4F'}
+                  onMouseLeave={(e) => e.currentTarget.style.color = '#2D2D2D'}
+                >
+                  {row.city}
+                </Link>
+              ) : (
               <button
                 onClick={() => onCityFilter?.(row.city)}
                 style={{
@@ -212,6 +257,7 @@ export default function DiscoverSidebar({ onCityFilter }) {
               >
                 {row.city}
               </button>
+              )}
 
               {/* Stat counters */}
               <span style={{
@@ -238,9 +284,10 @@ export default function DiscoverSidebar({ onCityFilter }) {
                   {row.blogCount} {row.blogCount === 1 ? 'Post' : 'Posts'}
                 </Link>
 
-                <span style={{ color: '#D4CDBC' }}>|</span>
+                {!isJournal && <span style={{ color: '#D4CDBC' }}>|</span>}
 
-                {/* Stories count — triggers city filter on Discover */}
+                {/* Stories count — triggers city filter on Discover (not shown in the Journal) */}
+                {!isJournal && (
                 <button
                   onClick={() => onCityFilter?.(row.city)}
                   style={{
@@ -259,6 +306,7 @@ export default function DiscoverSidebar({ onCityFilter }) {
                 >
                   {row.storyCount} {row.storyCount === 1 ? 'Story' : 'Stories'}
                 </button>
+                )}
               </span>
             </div>
           ))}
