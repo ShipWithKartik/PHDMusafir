@@ -72,7 +72,8 @@ export default function WorldMap() {
 
   /* ── Navigation helpers ────────────────────────────────────── */
   const goToStories = (pin) => {
-    navigate('/discover', { state: { cityFilter: pin.location } });
+    // storyCity is the exact spelling stories use (e.g. "GOA"), so Discover's filter matches
+    navigate('/discover', { state: { cityFilter: pin.storyCity || pin.location } });
   };
 
   const goToBlogs = (pin) => {

@@ -1,5 +1,7 @@
 const Blog = require('../models/Blog');
 const cloudinary = require('../config/cloudinary');
+// Standard spelling for known cities ("GOA" → "Goa") so map pins & filters match
+const { canonicalCity } = require('./storyController');
 
 /* ─────────────────────────────────────────
    USER-FACING HANDLERS
@@ -56,7 +58,7 @@ const createBlog = async (req, res) => {
     const blog = await Blog.create({
       title,
       content,
-      city: city.trim(),
+      city: canonicalCity(city),
       category,
       images,
       author: req.user._id,
@@ -124,7 +126,7 @@ const editBlog = async (req, res) => {
     const { title, content, city, category } = req.body;
     if (title !== undefined) blog.title = title;
     if (content !== undefined) blog.content = content;
-    if (city !== undefined) blog.city = city.trim();
+    if (city !== undefined) blog.city = canonicalCity(city);
     if (category !== undefined) blog.category = category;
 
     // If a new cover image was uploaded, swap it out and delete the old Cloudinary asset
@@ -301,7 +303,7 @@ const adminEditBlog = async (req, res) => {
     const { title, content, city, category, adminNote } = req.body;
     if (title !== undefined) blog.title = title;
     if (content !== undefined) blog.content = content;
-    if (city !== undefined) blog.city = city.trim();
+    if (city !== undefined) blog.city = canonicalCity(city);
     if (category !== undefined) blog.category = category;
     if (adminNote !== undefined) blog.adminNote = adminNote;
 

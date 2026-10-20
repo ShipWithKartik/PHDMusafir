@@ -70,7 +70,7 @@ const uploadStory = async (req, res) => {
     const story = await Story.create({
       title,
       description,
-      placeVisited,
+      placeVisited: placeVisited !== undefined ? canonicalCity(placeVisited) : placeVisited, // "GOA" → "Goa"
       category,
       tags: parsedTags,
       image: req.file.path,
@@ -172,7 +172,7 @@ const updateStory = async (req, res) => {
     const { title, description, placeVisited, category, tags } = req.body;
     if (title !== undefined) story.title = title;
     if (description !== undefined) story.description = description;
-    if (placeVisited !== undefined) story.placeVisited = placeVisited;
+    if (placeVisited !== undefined) story.placeVisited = canonicalCity(placeVisited);
     if (category !== undefined) story.category = category;
     if (tags !== undefined) {
       story.tags = Array.isArray(tags)
@@ -404,6 +404,19 @@ const CITY_COORDS = {
   'Mahabalipuram':     { lat: 12.6269, lng: 80.1927 },
 };
 
+/* Normalise a free-typed place name: trim, collapse spaces, lower-case */
+const normCity = (name = '') => String(name).trim().replace(/\s+/g, ' ').toLowerCase();
+
+/* Lower-cased CITY_COORDS name → canonical spelling (e.g. "goa" → "Goa") */
+const CITY_LOOKUP = new Map(Object.keys(CITY_COORDS).map((k) => [normCity(k), k]));
+
+/* Canonical city name if we know it ("GOA" → "Goa"), otherwise the trimmed input */
+const canonicalCity = (name = '') =>
+  CITY_LOOKUP.get(normCity(name)) || String(name).trim().replace(/\s+/g, ' ');
+
+/* Key used to merge stories + posts for the same city */
+const resolveCityKey = (name = '') => normCity(canonicalCity(name));
+
 const getJourneyPins = async (req, res) => {
   try {
     const Blog = require('../models/Blog');
@@ -428,50 +441,59 @@ const getJourneyPins = async (req, res) => {
       }},
     ]);
 
-    // ── 3. Merge into a unified map keyed by city name ────────
+    // ── 3. Merge into a unified map keyed by *normalised* city ─
+    // Place names are typed freely ("GOA", "goa ", "Goa"), so match them to
+    // CITY_COORDS ignoring case/extra spaces, and merge stories + posts for
+    // the same city into one pin.
     const merged = {};
+    const entryFor = (rawCity) => {
+      const key = resolveCityKey(rawCity);
+      if (!merged[key]) {
+        merged[key] = {
+          location:   canonicalCity(rawCity), // display name, e.g. "Goa"
+          storyCity:  null,                   // exact story spelling (for the Discover filter)
+          storyCount: 0,
+          blogCount:  0,
+          categories: new Set(),
+          blogIds:    [],
+        };
+      }
+      return merged[key];
+    };
 
     for (const doc of storyAgg) {
-      const city = doc._id;
-      if (!city) continue;
-      merged[city] = {
-        location:    city,
-        storyCount:  doc.count,
-        blogCount:   0,
-        categories:  new Set(doc.categories.filter(Boolean)),
-        blogIds:     [],
-      };
+      if (!doc._id || !String(doc._id).trim()) continue;
+      const entry = entryFor(doc._id);
+      // Keep the spelling used by most stories so Discover's city filter matches
+      if (!entry.storyCity || doc.count > entry.storyCityCount) {
+        entry.storyCity = doc._id;
+        entry.storyCityCount = doc.count;
+      }
+      entry.storyCount += doc.count;
+      doc.categories.filter(Boolean).forEach((c) => entry.categories.add(c));
     }
 
     for (const doc of blogAgg) {
-      const city = doc._id;
-      if (!city) continue;
-      if (merged[city]) {
-        merged[city].blogCount  = doc.count;
-        merged[city].blogIds    = doc.blogIds.map(String);
-        doc.categories.filter(Boolean).forEach(c => merged[city].categories.add(c));
-      } else {
-        merged[city] = {
-          location:    city,
-          storyCount:  0,
-          blogCount:   doc.count,
-          categories:  new Set(doc.categories.filter(Boolean)),
-          blogIds:     doc.blogIds.map(String),
-        };
-      }
+      if (!doc._id || !String(doc._id).trim()) continue;
+      const entry = entryFor(doc._id);
+      entry.blogCount += doc.count;
+      entry.blogIds.push(...doc.blogIds.map(String));
+      doc.categories.filter(Boolean).forEach((c) => entry.categories.add(c));
     }
 
     // ── 4. Resolve coordinates and build response ─────────────
+    const unmapped = [];
     const pins = Object.values(merged)
       .map(entry => {
         const coords = CITY_COORDS[entry.location];
-        if (!coords) return null;
+        if (!coords) { unmapped.push(entry.location); return null; }
         const totalCount = entry.storyCount + entry.blogCount;
         let type = 'both';
         if (entry.storyCount > 0 && entry.blogCount === 0) type = 'story';
         else if (entry.storyCount === 0 && entry.blogCount > 0) type = 'blog';
         return {
           location:    entry.location,
+          storyCity:   entry.storyCity || entry.location,
           latitude:    coords.lat,
           longitude:   coords.lng,
           storyCount:  entry.storyCount,
@@ -484,6 +506,11 @@ const getJourneyPins = async (req, res) => {
       })
       .filter(Boolean)
       .sort((a, b) => b.totalCount - a.totalCount);
+
+    // Places we have no coordinates for can't be pinned — log them so they can be added
+    if (unmapped.length) {
+      console.warn('[map-pins] no coordinates for:', unmapped.join(', '), '— add them to CITY_COORDS');
+    }
 
     res.status(200).json({ success: true, data: pins });
   } catch (error) {
@@ -594,4 +621,4 @@ const getCityStats = async (req, res) => {
   }
 };
 
-module.exports = { uploadStory, getAllStories, getMyStories, updateStory, deleteStory, getStoriesMeta, getJourneyPins, getRecentContent, getCityStats, uploadInlineImage };
+module.exports = { uploadStory, getAllStories, getMyStories, updateStory, deleteStory, getStoriesMeta, getJourneyPins, getRecentContent, getCityStats, uploadInlineImage, canonicalCity };
